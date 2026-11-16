@@ -28,6 +28,14 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))  # allow `from src...` when run as a script
+
+from src.languages import (  # noqa: E402
+    SOURCE_GEMINI, SOURCE_RULES, apply_overrides, load_overrides, rule_guess,
+)
+
+OVERRIDES_FILE = ROOT / "data" / "language_overrides.csv"
 SEED_FILE = ROOT / "data" / "seed_tracks.txt"
 OUT_FILE = ROOT / "data" / "real_songs.csv"
 USER_AGENT = "VibeMatchClassProject/0.1 (student project)"
@@ -51,7 +59,53 @@ GENRE_MAP = {
 FIELDS = [
     "id", "title", "artist", "genre", "mood", "energy", "tempo_bpm", "valence", "danceability",
     "acousticness", "spotify_id", "isrc", "album", "release_date", "cover_url", "deezer_url", "fact_sources",
+    "language", "language_source", "language_confidence",
 ]
+
+
+def label_languages(rows: list[dict], *, use_gemini: bool = True, service=None, batch: int = 50) -> Counter:
+    """Estimate each row's language ONCE at build time; manual overrides always win.
+
+    Gemini (when a key is available) labels from title/artist/album/genre; Python validates the
+    enum. Rows Gemini skips or rejects, or every row when no key exists, get a rule estimate.
+    """
+    labels: dict[int, tuple[str, float]] = {}
+    if use_gemini:
+        try:
+            if service is None:
+                from src.env import load_local_env
+                from src.gemini_service import GeminiService
+
+                load_local_env()
+                service = GeminiService()
+            if service.available:
+                for start in range(0, len(rows), batch):
+                    labels.update(service.classify_languages(rows[start : start + batch]))
+        except Exception as exc:  # external boundary: fall back to rules, never crash the build
+            print(f"  Gemini language labeling unavailable ({type(exc).__name__}); using rule estimates.", file=sys.stderr)
+            labels = {}
+    for row in rows:
+        if int(row["id"]) in labels:
+            language, confidence = labels[int(row["id"])]
+            row["language"], row["language_source"], row["language_confidence"] = language, SOURCE_GEMINI, confidence
+        else:
+            language, confidence = rule_guess(str(row["title"]), str(row["artist"]), str(row.get("album", "")), str(row["genre"]))
+            row["language"], row["language_source"], row["language_confidence"] = language, SOURCE_RULES, confidence
+    changed = apply_overrides(rows, load_overrides(OVERRIDES_FILE))
+    if changed:
+        print(f"  Applied {changed} manual language override(s) from {OVERRIDES_FILE.name}.")
+    return Counter(row["language_source"] for row in rows)
+
+
+def print_language_review(rows: list[dict]) -> None:
+    print("\nLanguage review (estimates; fix any row in data/language_overrides.csv):")
+    for row in rows:
+        print(f"  {int(row['id']):>3} {str(row['title'])[:32]:<32} {str(row['artist'])[:20]:<20} "
+              f"{row['language']:<11} {float(row['language_confidence']):.2f}  {row['language_source']}")
+    by_band = Counter((row["language"], min(9, int(float(row["energy"]) * 10))) for row in rows)
+    for language in sorted({row["language"] for row in rows}):
+        bands = [by_band.get((language, band), 0) for band in range(10)]
+        print(f"  {language:<11} total {sum(bands):>3}  per energy band 0.0-1.0: {bands}")
 
 
 def get_json(url: str, retries: int = 3):
@@ -304,11 +358,29 @@ def main() -> None:
     parser.add_argument("--allow-explicit", action="store_true", help="include tracks Deezer marks explicit (default: skip)")
     parser.add_argument("--max-rounds", type=int, default=30, help="maximum recommendation calls")
     parser.add_argument("--out", default=str(OUT_FILE))
+    parser.add_argument("--label-languages-only", action="store_true",
+                        help="only (re)estimate the language column of the existing catalog; no discovery")
+    parser.add_argument("--no-gemini", action="store_true", help="use rule estimates for language instead of Gemini")
     args = parser.parse_args()
+
+    if args.label_languages_only:
+        with open(args.out, newline="", encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle))
+        sources = label_languages(rows, use_gemini=not args.no_gemini)
+        with open(args.out, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=FIELDS, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+        print_language_review(rows)
+        print(f"\nLabeled {len(rows)} tracks: {dict(sources)}")
+        return
 
     rows = build(args.target, args.per_call, args.max_per_artist, args.allow_explicit, args.max_rounds)
     if len(rows) < 12:
         raise SystemExit(f"Only {len(rows)} usable tracks found; not writing a catalog. Add more seeds to data/seed_tracks.txt.")
+    sources = label_languages(rows, use_gemini=not args.no_gemini)
+    print_language_review(rows)
+    print(f"Language labels: {dict(sources)}")
     with open(args.out, "w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=FIELDS)
         writer.writeheader()

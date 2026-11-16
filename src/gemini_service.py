@@ -103,6 +103,66 @@ class GeminiService:
             raise ValueError("Gemini profile response was not a JSON object.")
         return validate_profile(raw, supported_genres=supported_genres, supported_moods=supported_moods)
 
+    def classify_languages(self, tracks: Sequence[Mapping[str, Any]]) -> dict[int, tuple[str, float]]:
+        """Catalog-build-time only: estimate the sung language of each track.
+
+        Returns {id: (language, confidence)} for the IDs Gemini answered validly. The caller
+        must fall back to rules for any ID that is missing. Never called at playlist time.
+        """
+        from src.languages import LANGUAGES, normalize_language
+
+        payload = [
+            {"id": int(t["id"]), "title": t.get("title", ""), "artist": t.get("artist", ""),
+             "album": t.get("album", ""), "genre": t.get("genre", "")}
+            for t in tracks
+        ]
+        schema = {
+            "type": "object",
+            "properties": {
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "integer"},
+                            "language": {"type": "string", "enum": list(LANGUAGES)},
+                            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                        },
+                        "required": ["id", "language", "confidence"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["labels"],
+            "additionalProperties": False,
+        }
+        response = self._client_or_create().models.generate_content(
+            model=self.model,
+            contents=(
+                "For each track, give the main language its lyrics are sung in, chosen from the allowed list. "
+                "Use 'instrumental' only if it has no vocals and 'other' if the language is not listed. "
+                "Give a lower confidence when you are unsure. Answer for every id.\n"
+                f"Tracks: {json.dumps(payload, ensure_ascii=False)}"
+            ),
+            config={"response_mime_type": "application/json", "response_json_schema": schema, "temperature": 0.0},
+        )
+        raw = getattr(response, "parsed", None)
+        if not isinstance(raw, Mapping):
+            raw = json.loads(response.text)
+        valid_ids = {int(t["id"]) for t in tracks}
+        labels: dict[int, tuple[str, float]] = {}
+        for item in raw.get("labels", []) if isinstance(raw, Mapping) else []:
+            if not isinstance(item, Mapping):
+                continue
+            item_id, language = item.get("id"), normalize_language(item.get("language"))
+            try:
+                confidence = min(1.0, max(0.0, float(item.get("confidence", 0))))
+            except (TypeError, ValueError):
+                continue
+            if isinstance(item_id, int) and item_id in valid_ids and language:
+                labels[item_id] = (language, round(confidence, 2))
+        return labels
+
     def explain(self, result: PlaylistResult) -> PlaylistResult:
         """Explain only selected verified records; never permit ranking changes."""
         payload = [
