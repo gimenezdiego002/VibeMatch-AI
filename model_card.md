@@ -127,23 +127,31 @@ Problems found during testing and fixed: a silent 20-song cap; dropped language 
 
 ## What surprised me while testing
 
-> **Student placeholder:** In your own words, describe what surprised you while testing the system's reliability. You can draw on the factual findings above (for example the grounded-but-vague AI answers, the hidden 20-song cap, the hedge-word bug, the free-tier quota, or how few Spanish workout tracks the catalog had), but the reflection must be yours.
+What surprised me most was how many bugs were hiding behind results that looked fine. When I asked for 30 songs, the app quietly gave me 20, because of a cap nobody had written down, and nothing on screen said anything was wrong. When I asked for "all in Spanish", I got mostly English songs, and the reason turned out to be tiny: the code treated "ish" as a hedge word ("kind of"), and "span**ish**" contains "ish", so every language request was being softened. I would never have guessed that from looking at the output.
+
+The chatbot surprised me too. Gemini's answers passed my first checks because every song it mentioned was real, but some answers didn't actually answer the question. They named the right songs without giving the BPM I asked about, or they left out matches. "Not making things up" turned out not to be the same as "being correct", so I had to add checks for complete answers. I was also surprised by how small the free Gemini quota is (20 requests a day), which meant the offline fallback wasn't just a backup but something I relied on all the time. And once the Spanish filter finally worked, it showed that my catalog only had 4 Spanish songs energetic enough for a workout. The system was being honest, but the data was the real limit.
 
 ## Collaboration with AI
 
-> **Student placeholder:** Describe, in your own words, how you collaborated with AI tools during this project: what you asked for, how you checked the results, and where you made the final decisions.
+I used an AI coding assistant (Claude Code) throughout this project, and the Gemini API is part of the app itself. I ran the dashboard, typed real requests like "15 songs all in Spanish kinda recent", and reported what was wrong. Several of the most important fixes started from me noticing something off in the app, like the 30-song request coming back with 20 songs or the Spanish request returning English songs, and pasting the error or the result back.
+
+I checked the assistant's work by running the app and the test suite (180 tests) and by reading the evaluation output, not just trusting its summary. I made the final decisions on scope and direction: using real music instead of only the fictional catalog, which music APIs to try after ReccoBeats gave me errors and Deezer looked like it needed a subscription, adding the chatbot, how the dashboard should look, and when to commit and push to GitHub.
 
 ### AI suggestion accepted
 
-> **Student placeholder:** Describe one AI suggestion you personally reviewed and accepted, why it fit the assignment, and how you verified it. A possible topic to evaluate in your own words is separating Gemini interpretation from deterministic selection.
+I accepted the suggestion to split the work so that Gemini only interprets my request and words the explanations, while Python does all the selecting, scoring, and ordering. It fit the assignment because the project is supposed to be a reliable applied AI system, and this made every playlist explainable and repeatable: the same request always gives the same songs, and every score in the Score details tab adds up. I checked it by running the same request several times, looking at the System checks tab (IDs exist, no duplicates, deterministic), and by turning Gemini off to confirm the app still works and labels the fallback. The same idea carried over to the chatbot: Python finds the songs first and Gemini can only talk about those.
 
 ### AI suggestion rejected or modified
 
-> **Student placeholder:** Describe one suggestion you rejected or changed and why. A possible topic to evaluate in your own words is preserving the displayed compatibility score while adding a separate energy-ordering utility after the first workout run revealed a sequencing problem.
+Early on, the assistant was following a "no custom CSS" rule for the dashboard and kept the design very plain. I questioned where that rule came from, since it wasn't in my project instructions, and decided custom CSS was fine because how the app looks matters for this project, as long as it stays functional and easy to use. We changed course and built a custom stylesheet (album-cover cards, a dark theme, a chat button in the corner) that still respects reduced-motion and contrast settings.
+
+I also changed how the music data works. The first plan relied on third-party APIs at request time, but ReccoBeats kept giving me error codes and Deezer seemed to need a subscription, so we switched to building the real catalog once with a script and saving it to a CSV that a person can review. That made the app faster, worked offline, and stopped depending on APIs I couldn't reliably reach.
 
 ## Responsible AI reflection
 
-> **Student placeholder:** Write your own reflection on what responsibility remains with the developer when model output is schema-valid but semantically poor, and why showing fallbacks and inferred preferences matters. Do not submit this placeholder unchanged.
+This project showed me that "the AI returned valid JSON" doesn't mean "the AI did the right thing." Gemini's output always matched the schema, but it could still misread a request, give priorities that don't make sense, or write a chatbot answer that sounds confident but is incomplete. Checking that output falls on me as the developer: clamping numbers, checking genres and languages against what the catalog actually has, making sure every cited song was really retrieved, and throwing out answers that skip what the user asked. If I just passed the model output through, the app would look like it worked while quietly being wrong, like the 20-song cap or the Spanish bug.
+
+That's also why I think showing the inferred profile and the fallback labels matters. A user should be able to see that the app read "kinda recent" as a preference and "all in Spanish" as a requirement, see when there weren't enough songs instead of getting English filler, and know whether Gemini or the local fallback produced a result. Being honest about what the system did, including what it couldn't do, is what lets people trust it and correct it. The language labels are a good example: they are AI estimates, so the app marks them that way and lets a person override them.
 
 ## Future improvements
 

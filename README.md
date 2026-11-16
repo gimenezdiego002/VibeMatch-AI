@@ -437,13 +437,15 @@ Evaluation results ([`evaluation_results.txt`](evaluation_results.txt)):
 
 ## Project reflection
 
-> **Student placeholder:** Add 1–2 paragraphs in your own words about what you learned by combining probabilistic language interpretation with deterministic scoring, what surprised you during testing, and what you would change next. Do not submit this placeholder as your final personal reflection.
+The biggest thing I learned is that AI and regular code are good at different jobs. Gemini is great at understanding messy requests like "I'm working out, 15 songs, kinda recent", but I don't want it picking songs or making up scores, because then I couldn't explain or repeat the results. Letting Gemini interpret and phrase, while Python selects, scores, and verifies, gave me a system that understands natural language but still behaves predictably. Testing surprised me: some of the worst bugs gave results that looked normal, like a hidden 20-song cap and "spanish" being treated as a vague request because it contains "ish". Testing with real requests found problems that just reading the code never would have.
+
+Next, I would add Spanish and other non-English seed tracks so language requests have more songs to pick from, let listeners give feedback to tune the scoring weights, handle negation like "no reggaeton", and run a fuller live Gemini evaluation once I'm not limited by the free quota.
 
 ## Portfolio
 
 - **Code:** https://github.com/gimenezdiego002/VibeMatch-AI
 
-> **Student placeholder:** Write a short paragraph, in your own words, on what this project says about you as an AI engineer.
+This project shows that I build AI features that can be checked, not just demoed. I took a simple Module 3 recommender and turned it into a system with natural-language input, real music, and a chatbot, and I made sure every AI step has validation, a labeled fallback, and tests behind it (180 automated tests and an evaluation script). I care about how a product looks and feels to use, but I care more about it being honest with the user, whether that means warning when there aren't enough songs or refusing a question the data can't answer.
 
 ## Presentation
 
