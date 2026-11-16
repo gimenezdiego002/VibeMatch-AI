@@ -212,6 +212,118 @@ class GeminiService:
                 labels[item_id] = (language, round(confidence, 2))
         return labels
 
+    def parse_question(
+        self,
+        question: str,
+        *,
+        genres: Sequence[str],
+        moods: Sequence[str],
+        languages: Sequence[str],
+        has_playlist: bool,
+    ) -> dict[str, Any]:
+        """Chatbot step 1: turn a question into a structured catalog query (no answering)."""
+        from src.chatbot import FIELDS, INTENTS, MAX_RESULTS, SORTABLE
+
+        number = {"type": "number"}
+        schema = {
+            "type": "object",
+            "properties": {
+                "intent": {"type": "string", "enum": list(INTENTS)},
+                "scope": {"type": "string", "enum": ["playlist", "catalog"]},
+                "target_ranks": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 50}, "maxItems": 5},
+                "target_text": {"type": "string"},
+                "fields": {"type": "array", "items": {"type": "string", "enum": list(FIELDS)}},
+                "filters": {
+                    "type": "object",
+                    "properties": {
+                        "genre": {"type": "string", "enum": ["", *genres]},
+                        "mood": {"type": "string", "enum": ["", *moods]},
+                        "language": {"type": "string", "enum": ["", *languages]},
+                        "year_min": number, "year_max": number, "bpm_min": number, "bpm_max": number,
+                        "energy_min": number, "energy_max": number,
+                    },
+                    "additionalProperties": False,
+                },
+                "relative": {
+                    "type": "object",
+                    "properties": {
+                        "field": {"type": "string", "enum": list(SORTABLE)},
+                        "direction": {"type": "string", "enum": ["lower", "higher"]},
+                        "reference_rank": {"type": "integer", "minimum": 1, "maximum": 50},
+                    },
+                    "additionalProperties": False,
+                },
+                "sort_by": {"type": "string", "enum": ["", *SORTABLE]},
+                "order": {"type": "string", "enum": ["asc", "desc"]},
+                "limit": {"type": "integer", "minimum": 1, "maximum": MAX_RESULTS},
+            },
+            "required": ["intent", "scope"],
+            "additionalProperties": False,
+        }
+        response = self._client_or_create().models.generate_content(
+            model=self.model,
+            contents=(
+                "Convert the user's question about a song catalog into a query. Do NOT answer it. "
+                "Use intent 'unsupported' for anything the catalog fields cannot answer (lyrics, biographies, "
+                "awards, charts, trivia). Song numbers like '#4' refer to playlist ranks. "
+                f"A playlist {'exists' if has_playlist else 'does not exist yet'}; use scope 'catalog' for "
+                "questions about everything available. Fields available: title, artist, album, release_year, "
+                "genre, mood, language, tempo_bpm, energy (0-1). For 'quieter/calmer than #3' use relative "
+                "energy lower; 'faster than #2' relative tempo_bpm higher.\n"
+                f"Question: {question}"
+            ),
+            config={"response_mime_type": "application/json", "response_json_schema": schema, "temperature": 0.0},
+        )
+        raw = getattr(response, "parsed", None)
+        if not isinstance(raw, Mapping):
+            raw = json.loads(response.text)
+        if not isinstance(raw, Mapping):
+            raise ValueError("Gemini query response was not a JSON object.")
+        return dict(raw)
+
+    def answer_from_records(
+        self,
+        question: str,
+        *,
+        records: Sequence[Mapping[str, Any]],
+        total_matches: int,
+        reference: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Chatbot step 3: answer ONLY from retrieved records, citing their IDs.
+
+        The caller verifies the citations and every number before showing the answer.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "answer": {"type": "string"},
+                "cited_ids": {"type": "array", "items": {"type": "integer"}},
+            },
+            "required": ["answer", "cited_ids"],
+            "additionalProperties": False,
+        }
+        response = self._client_or_create().models.generate_content(
+            model=self.model,
+            contents=(
+                "Answer the question in one to three short sentences using ONLY these catalog records. "
+                "Do not add facts that are not in the records (no lyrics, biographies, or trivia). "
+                "Only mention numbers that appear in the records. Language values are estimates. "
+                "Mention EVERY record and list ALL of their ids in cited_ids.\n"
+                + (f"Reference song being compared against: {json.dumps(dict(reference), ensure_ascii=False)}\n"
+                   if reference else "")
+                + f"Total matching songs: {total_matches}\n"
+                f"Records: {json.dumps(list(records), ensure_ascii=False)}\n"
+                f"Question: {question}"
+            ),
+            config={"response_mime_type": "application/json", "response_json_schema": schema, "temperature": 0.2},
+        )
+        raw = getattr(response, "parsed", None)
+        if not isinstance(raw, Mapping):
+            raw = json.loads(response.text)
+        if not isinstance(raw, Mapping):
+            raise ValueError("Gemini answer response was not a JSON object.")
+        return {"answer": str(raw.get("answer", ""))[:800], "cited_ids": list(raw.get("cited_ids", []))}
+
     def explain(self, result: PlaylistResult) -> PlaylistResult:
         """Explain only selected verified records; never permit ranking changes."""
         payload = [
