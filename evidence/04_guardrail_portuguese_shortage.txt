@@ -1,0 +1,62 @@
+$ python -m src.main --offline --catalog data/real_songs.csv -r 20 songs all in portuguese for running
+# recorded 2026-11-16, offline (no network, no API key needed)
+
+
+Running VibeMatch
+=================
+Request: 20 songs all in portuguese for running
+Detected activity: running
+Inferred profile:
+{
+  "activity": "running",
+  "playlist_length": 20,
+  "preferred_genres": [
+    "electronic",
+    "pop",
+    "rock"
+  ],
+  "target_mood": "energetic",
+  "target_energy": 0.88,
+  "target_tempo_bpm": 150.0,
+  "playlist_structure": "warmup_peak_cooldown",
+  "language": "portuguese",
+  "language_strict": true,
+  "min_release_year": null,
+  "max_release_year": null,
+  "recency_strict": false,
+  "priorities": {},
+  "notes": []
+}
+AI status: interpretation=local fallback, explanations=deterministic
+Warning: Gemini was not used; local keyword-based interpretation is active.
+Warning: Only 9 Portuguese songs fit this catalog; returning 9 instead of 20.
+
+Ordered playlist (9 songs):
+
+ 1. Elevador — Ana Laura Lopes [pop, energetic]
+    Compatibility: 89.66/100 | energy=0.81 (position target=0.60) | tempo=112 BPM
+    Why: energy fit 80%; genre fit 100%
+ 2. Tem Café — Henry Freitas, Andrezin Araújo [brazilian music, euphoric]
+    Compatibility: 61.68/100 | energy=0.91 (position target=0.78) | tempo=136 BPM
+    Why: energy fit 87%; mood fit 70%
+ 3. Vem Dancar Kuduro — Lucenzo, Big Ali [other, euphoric]
+    Compatibility: 65.17/100 | energy=0.94 (position target=0.96) | tempo=130 BPM
+    Why: energy fit 98%; mood fit 70%
+ 4. Imagina — Anitta, Rogerinho [r&b, happy]
+    Compatibility: 50.10/100 | energy=0.69 (position target=0.96) | tempo=115 BPM
+    Why: energy fit 73%; genre fit 50%
+ 5. Sexy Iemanjá — Pepeu Gomes [brazilian music, happy]
+    Compatibility: 39.88/100 | energy=0.79 (position target=0.96) | tempo=100 BPM
+    Why: energy fit 83%; tempo fit 72%
+ 6. Som de Alceu — Gabriel Elias, Falamansa [other, happy]
+    Compatibility: 29.32/100 | energy=0.52 (position target=0.96) | tempo=87 BPM
+    Why: energy fit 56%; tempo fit 65%
+ 7. Então Profetiza — Maria Marçal [other, reflective]
+    Compatibility: 29.83/100 | energy=0.50 (position target=0.96) | tempo=102 BPM
+    Why: energy fit 54%; tempo fit 73%
+ 8. Não faz isso Comigo não — Tz da Coronel, CalliCartel [hip-hop, reflective]
+    Compatibility: 35.25/100 | energy=0.38 (position target=0.73) | tempo=120 BPM
+    Why: energy fit 65%; tempo fit 83%
+ 9. se quiser voltar (interlúdio) — Delacruz, JOK3R [hip-hop, peaceful]
+    Compatibility: 41.96/100 | energy=0.35 (position target=0.50) | tempo=117 BPM
+    Why: energy fit 85%; tempo fit 82%

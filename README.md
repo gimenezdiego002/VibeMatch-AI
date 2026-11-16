@@ -127,7 +127,7 @@ python evaluation.py              # offline + mocked Gemini; add --live for a la
 
 ## Sample interactions
 
-All outputs below are copied from real runs on November 16, 2026. Long playlists are trimmed with `...`.
+All outputs below are copied from real runs on November 16, 2026. Long playlists are trimmed with `...`; the untrimmed captures, each with its exact command, are in [`evidence/`](evidence/).
 
 ### 1. Spanish workout, real catalog, offline, plus chatbot questions
 
@@ -344,7 +344,7 @@ The app never builds it at runtime.
 
 - **Mood is derived** from valence and energy by the documented rules in `derive_mood()`.
 - **Language is estimated** once at build time. Gemini labels each track from its title, artist, album and genre, and Python validates the label against a fixed list. Without a key, a rule-based guess is used. Each row records `language_source` and `language_confidence`. Corrections in [`data/language_overrides.csv`](data/language_overrides.csv) always win; one is already there, for a track Gemini wrongly marked instrumental.
-- Current language mix (estimates): 48 English, 14 Spanish, 9 Portuguese, and a few each of other languages.
+- Current language mix (estimates): 49 English, 14 Spanish, 9 Portuguese, and 23 in other languages or instrumental.
 
 ```powershell
 python scripts/build_real_catalog.py                        # rebuild, about 100 tracks (seeds: data/seed_tracks.txt)

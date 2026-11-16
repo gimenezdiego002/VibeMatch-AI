@@ -1,0 +1,64 @@
+$ python -m src.main --offline -r Make a 10-song high-energy gym workout with a warm-up and cooldown
+# recorded 2026-11-16, offline (no network, no API key needed)
+
+
+Workout VibeMatch
+=================
+Request: Make a 10-song high-energy gym workout with a warm-up and cooldown
+Detected activity: workout
+Inferred profile:
+{
+  "activity": "workout",
+  "playlist_length": 10,
+  "preferred_genres": [
+    "pop",
+    "electronic",
+    "rock"
+  ],
+  "target_mood": "intense",
+  "target_energy": 0.86,
+  "target_tempo_bpm": 138.0,
+  "playlist_structure": "warmup_peak_cooldown",
+  "language": null,
+  "language_strict": false,
+  "min_release_year": null,
+  "max_release_year": null,
+  "recency_strict": false,
+  "priorities": {},
+  "notes": []
+}
+AI status: interpretation=local fallback, explanations=deterministic
+Warning: Gemini was not used; local keyword-based interpretation is active.
+
+Ordered playlist (10 songs):
+
+ 1. Coastal Turn — Daytrip Cinema [indie pop, relaxed]
+    Compatibility: 64.83/100 | energy=0.58 (position target=0.58) | tempo=106 BPM
+    Why: energy fit 100%; genre fit 70%
+ 2. Storm Runner — Voltline [rock, intense]
+    Compatibility: 92.88/100 | energy=0.91 (position target=0.74) | tempo=152 BPM
+    Why: energy fit 83%; genre fit 100%
+ 3. Gym Hero — Max Pulse [pop, intense]
+    Compatibility: 98.45/100 | energy=0.93 (position target=0.90) | tempo=132 BPM
+    Why: energy fit 97%; genre fit 100%
+ 4. Final Rep — Core Anthem [rock, intense]
+    Compatibility: 97.80/100 | energy=0.96 (position target=0.94) | tempo=156 BPM
+    Why: energy fit 98%; genre fit 100%
+ 5. Summit Signal — Altitude Zero [electronic, intense]
+    Compatibility: 96.77/100 | energy=0.98 (position target=0.94) | tempo=160 BPM
+    Why: energy fit 96%; genre fit 100%
+ 6. Second Wind — Peak Motion [electronic, energetic]
+    Compatibility: 93.47/100 | energy=0.92 (position target=0.94) | tempo=148 BPM
+    Why: energy fit 98%; genre fit 100%
+ 7. Iron Descent — Black Anvil [metal, aggressive]
+    Compatibility: 81.45/100 | energy=0.97 (position target=0.94) | tempo=168 BPM
+    Why: energy fit 97%; mood fit 80%
+ 8. Neon Ascent — Pulse Theory [electronic, euphoric]
+    Compatibility: 73.78/100 | energy=0.90 (position target=0.89) | tempo=128 BPM
+    Why: energy fit 99%; genre fit 100%
+ 9. Circuit Focus — Signal Garden [electronic, focused]
+    Compatibility: 73.34/100 | energy=0.67 (position target=0.68) | tempo=124 BPM
+    Why: energy fit 99%; genre fit 100%
+10. Steady State — Pattern Study [electronic, focused]
+    Compatibility: 71.83/100 | energy=0.48 (position target=0.48) | tempo=100 BPM
+    Why: energy fit 100%; genre fit 100%

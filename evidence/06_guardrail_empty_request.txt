@@ -1,0 +1,4 @@
+$ python -m src.main --offline -r    
+# recorded 2026-11-16, offline (no network, no API key needed)
+
+Error: Playlist request cannot be empty.

@@ -1,0 +1,99 @@
+$ python -m src.main --offline --catalog data/real_songs.csv -r I am working out I want 15 songs all in spanish kinda recent --ask What album is #1 from? --ask Is there anything quieter than #2? --ask What are the lyrics of #3?
+# recorded 2026-11-16, offline (no network, no API key needed)
+
+
+Workout VibeMatch
+=================
+Request: I am working out I want 15 songs all in spanish kinda recent
+Detected activity: workout
+Inferred profile:
+{
+  "activity": "workout",
+  "playlist_length": 15,
+  "preferred_genres": [
+    "latin",
+    "reggaeton"
+  ],
+  "target_mood": "intense",
+  "target_energy": 0.86,
+  "target_tempo_bpm": 138.0,
+  "playlist_structure": "warmup_peak_cooldown",
+  "language": "spanish",
+  "language_strict": true,
+  "min_release_year": 2021,
+  "max_release_year": null,
+  "recency_strict": false,
+  "priorities": {},
+  "notes": []
+}
+AI status: interpretation=local fallback, explanations=deterministic
+Warning: Gemini was not used; local keyword-based interpretation is active.
+Warning: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+
+Ordered playlist (14 songs):
+
+ 1. Con Silenciador — El Alfa, Anuel AA [latin, intense]
+    Compatibility: 87.61/100 | energy=0.81 (position target=0.58) | tempo=116 BPM
+    Why: energy fit 77%; genre fit 100%
+ 2. Ojos Colorados — Junior H, Alto Linaje [latin, confident]
+    Compatibility: 73.20/100 | energy=0.74 (position target=0.69) | tempo=108 BPM
+    Why: energy fit 95%; genre fit 100%
+ 3. Que Le De — Rauw Alejandro, Nicky Jam [reggaeton, confident]
+    Compatibility: 71.32/100 | energy=0.75 (position target=0.80) | tempo=100 BPM
+    Why: energy fit 95%; genre fit 100%
+ 4. Beso Al Aire (feat. América Sierra & Smoky) — 3BallMTY, América Sierra [traditional mexicano, euphoric]
+    Compatibility: 59.44/100 | energy=0.92 (position target=0.91) | tempo=132 BPM
+    Why: energy fit 100%; genre fit 70%
+ 5. Amargo Adiós — Inspector [rock, happy]
+    Compatibility: 44.12/100 | energy=0.67 (position target=0.94) | tempo=140 BPM
+    Why: energy fit 73%; tempo fit 99%
+ 6. Inolvidable — Ovy On The Drums, Beéle [hip-hop, happy]
+    Compatibility: 53.86/100 | energy=0.54 (position target=0.94) | tempo=140 BPM
+    Why: energy fit 60%; tempo fit 99%
+ 7. Me Llamas — José Luis Perales [pop, happy]
+    Compatibility: 38.66/100 | energy=0.68 (position target=0.94) | tempo=125 BPM
+    Why: energy fit 74%; tempo fit 93%
+ 8. Seremos — El Bebeto [latin, focused]
+    Compatibility: 57.95/100 | energy=0.44 (position target=0.94) | tempo=138 BPM
+    Why: genre fit 100%; energy fit 50%
+ 9. UNA TRIPLE LAVADA — LUIS CON CHICLES, GUSTAMBO CERDIVIL [other, happy]
+    Compatibility: 42.87/100 | energy=0.58 (position target=0.94) | tempo=100 BPM
+    Why: energy fit 64%; recency fit 100%
+10. La Declaración — El Zar [pop, focused]
+    Compatibility: 39.59/100 | energy=0.49 (position target=0.94) | tempo=113 BPM
+    Why: energy fit 55%; recency fit 90%
+11. Que Hay Que Hacer — Gerardo Coronel [traditional mexicano, chill]
+    Compatibility: 48.21/100 | energy=0.27 (position target=0.91) | tempo=80 BPM
+    Why: genre fit 70%; recency fit 100%
+12. La sombra de tus alas (Ver Acústica) — Living, Un Corazón [christian, reflective]
+    Compatibility: 35.38/100 | energy=0.30 (position target=0.76) | tempo=96 BPM
+    Why: energy fit 53%; tempo fit 77%
+13. Si Nos Dejan — José Alfredo Jimenez [pop, peaceful]
+    Compatibility: 31.24/100 | energy=0.29 (position target=0.62) | tempo=109 BPM
+    Why: energy fit 67%; tempo fit 84%
+14. La Lechuza Hace Shh — Leoncito Alado [other, peaceful]
+    Compatibility: 40.95/100 | energy=0.10 (position target=0.48) | tempo=120 BPM
+    Why: energy fit 62%; tempo fit 90%
+
+Questions about this playlist and catalog:
+
+Q: What album is #1 from?
+[Catalog lookup] #1 Con Silenciador by El Alfa, Anuel AA: from the album “El Hombre”.
+Sources: ID 78 Con Silenciador
+
+Q: Is there anything quieter than #2?
+[Catalog lookup] 10 songs are quieter than #2 Ojos Colorados by Junior H, Alto Linaje (energy 0.74):
+- #14 La Lechuza Hace Shh by Leoncito Alado: energy 0.10
+- #11 Que Hay Que Hacer by Gerardo Coronel: energy 0.27
+- #13 Si Nos Dejan by José Alfredo Jimenez: energy 0.29
+- #12 La sombra de tus alas (Ver Acústica) by Living, Un Corazón: energy 0.30
+- #8 Seremos by El Bebeto: energy 0.44
+- #10 La Declaración by El Zar: energy 0.49
+- #6 Inolvidable by Ovy On The Drums, Beéle: energy 0.54
+- #9 UNA TRIPLE LAVADA by LUIS CON CHICLES, GUSTAMBO CERDIVIL: energy 0.58
+- #5 Amargo Adiós by Inspector: energy 0.67
+- #7 Me Llamas by José Luis Perales: energy 0.68
+Sources: ID 1 La Lechuza Hace Shh; ID 8 Que Hay Que Hacer; ID 11 Si Nos Dejan; ID 14 La sombra de tus alas (Ver Acústica); ID 32 Seremos; ID 37 La Declaración; ID 44 Inolvidable; ID 52 UNA TRIPLE LAVADA; ID 57 Amargo Adiós; ID 59 Me Llamas
+
+Q: What are the lyrics of #3?
+[Catalog lookup] The catalog doesn't contain that. I can only answer from each song's title, artist, album, release year, genre, mood, language, tempo, and energy.

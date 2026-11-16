@@ -1,0 +1,81 @@
+$ python -m src.main --offline --verbose --catalog data/real_songs.csv -r I want 15 songs all in spanish for a workout
+# recorded 2026-11-16, offline (no network, no API key needed)
+
+2026-11-16 02:58:41,284 INFO src.app: Playlist request on real_songs.csv (offline=True): I want 15 songs all in spanish for a workout
+2026-11-16 02:58:41,285 INFO src.app: Profile (local): activity=workout length=15 language=spanish hard years=None-None structure=warmup_peak_cooldown
+2026-11-16 02:58:41,288 INFO src.app: Playlist ready: 14 of 15 songs, explanations=deterministic, 2 warning(s), 4 ms
+2026-11-16 02:58:41,290 INFO src.app: Warning shown to user: Gemini was not used; local keyword-based interpretation is active.
+2026-11-16 02:58:41,290 INFO src.app: Warning shown to user: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+
+Workout VibeMatch
+=================
+Request: I want 15 songs all in spanish for a workout
+Detected activity: workout
+Inferred profile:
+{
+  "activity": "workout",
+  "playlist_length": 15,
+  "preferred_genres": [
+    "latin",
+    "reggaeton"
+  ],
+  "target_mood": "intense",
+  "target_energy": 0.86,
+  "target_tempo_bpm": 138.0,
+  "playlist_structure": "warmup_peak_cooldown",
+  "language": "spanish",
+  "language_strict": true,
+  "min_release_year": null,
+  "max_release_year": null,
+  "recency_strict": false,
+  "priorities": {},
+  "notes": []
+}
+AI status: interpretation=local fallback, explanations=deterministic
+Warning: Gemini was not used; local keyword-based interpretation is active.
+Warning: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+
+Ordered playlist (14 songs):
+
+ 1. Con Silenciador — El Alfa, Anuel AA [latin, intense]
+    Compatibility: 90.26/100 | energy=0.81 (position target=0.58) | tempo=116 BPM
+    Why: energy fit 77%; genre fit 100%
+ 2. Ojos Colorados — Junior H, Alto Linaje [latin, confident]
+    Compatibility: 70.68/100 | energy=0.74 (position target=0.69) | tempo=108 BPM
+    Why: energy fit 95%; genre fit 100%
+ 3. Que Le De — Rauw Alejandro, Nicky Jam [reggaeton, confident]
+    Compatibility: 70.01/100 | energy=0.75 (position target=0.80) | tempo=100 BPM
+    Why: energy fit 95%; genre fit 100%
+ 4. Beso Al Aire (feat. América Sierra & Smoky) — 3BallMTY, América Sierra [traditional mexicano, euphoric]
+    Compatibility: 66.86/100 | energy=0.92 (position target=0.91) | tempo=132 BPM
+    Why: energy fit 100%; genre fit 70%
+ 5. Me Llamas — José Luis Perales [pop, happy]
+    Compatibility: 39.96/100 | energy=0.68 (position target=0.94) | tempo=125 BPM
+    Why: energy fit 74%; tempo fit 93%
+ 6. Amargo Adiós — Inspector [rock, happy]
+    Compatibility: 40.24/100 | energy=0.67 (position target=0.94) | tempo=140 BPM
+    Why: energy fit 73%; tempo fit 99%
+ 7. Inolvidable — Ovy On The Drums, Beéle [hip-hop, happy]
+    Compatibility: 48.44/100 | energy=0.54 (position target=0.94) | tempo=140 BPM
+    Why: energy fit 60%; tempo fit 99%
+ 8. Seremos — El Bebeto [latin, focused]
+    Compatibility: 57.64/100 | energy=0.44 (position target=0.94) | tempo=138 BPM
+    Why: genre fit 100%; energy fit 50%
+ 9. UNA TRIPLE LAVADA — LUIS CON CHICLES, GUSTAMBO CERDIVIL [other, happy]
+    Compatibility: 34.30/100 | energy=0.58 (position target=0.94) | tempo=100 BPM
+    Why: energy fit 64%; tempo fit 79%
+10. La Declaración — El Zar [pop, focused]
+    Compatibility: 32.03/100 | energy=0.49 (position target=0.94) | tempo=113 BPM
+    Why: energy fit 55%; tempo fit 86%
+11. Que Hay Que Hacer — Gerardo Coronel [traditional mexicano, chill]
+    Compatibility: 40.44/100 | energy=0.27 (position target=0.91) | tempo=80 BPM
+    Why: genre fit 70%; energy fit 36%
+12. La sombra de tus alas (Ver Acústica) — Living, Un Corazón [christian, reflective]
+    Compatibility: 30.19/100 | energy=0.30 (position target=0.76) | tempo=96 BPM
+    Why: energy fit 53%; tempo fit 77%
+13. Si Nos Dejan — José Alfredo Jimenez [pop, peaceful]
+    Compatibility: 35.93/100 | energy=0.29 (position target=0.62) | tempo=109 BPM
+    Why: energy fit 67%; tempo fit 84%
+14. La Lechuza Hace Shh — Leoncito Alado [other, peaceful]
+    Compatibility: 35.09/100 | energy=0.10 (position target=0.48) | tempo=120 BPM
+    Why: energy fit 62%; tempo fit 90%

@@ -1,0 +1,185 @@
+$ python -m src.main --offline -r Make 60 songs for a party
+# recorded 2026-11-16, offline (no network, no API key needed)
+
+
+Party VibeMatch
+===============
+Request: Make 60 songs for a party
+Detected activity: party
+Inferred profile:
+{
+  "activity": "party",
+  "playlist_length": 50,
+  "preferred_genres": [
+    "dance",
+    "pop",
+    "reggaeton"
+  ],
+  "target_mood": "euphoric",
+  "target_energy": 0.9,
+  "target_tempo_bpm": 126.0,
+  "playlist_structure": "build",
+  "language": null,
+  "language_strict": false,
+  "min_release_year": null,
+  "max_release_year": null,
+  "recency_strict": false,
+  "priorities": {},
+  "notes": []
+}
+AI status: interpretation=local fallback, explanations=deterministic
+Warning: Gemini was not used; local keyword-based interpretation is active.
+Warning: Requested 60 songs; the maximum playlist length is 50, so 50 will be returned.
+
+Ordered playlist (50 songs):
+
+ 1. Open Road Chorus — Maple Radio [indie pop, happy]
+    Compatibility: 81.70/100 | energy=0.73 (position target=0.65) | tempo=120 BPM
+    Why: energy fit 92%; genre fit 70%
+ 2. Afterglow Avenue — Nova June [pop, euphoric]
+    Compatibility: 92.47/100 | energy=0.87 (position target=0.66) | tempo=126 BPM
+    Why: energy fit 78%; genre fit 100%
+ 3. Rooftop Lights — Indigo Parade [indie pop, happy]
+    Compatibility: 81.33/100 | energy=0.76 (position target=0.66) | tempo=124 BPM
+    Why: energy fit 90%; genre fit 70%
+ 4. Sunrise City — Neon Echo [pop, happy]
+    Compatibility: 86.41/100 | energy=0.82 (position target=0.67) | tempo=118 BPM
+    Why: energy fit 85%; genre fit 100%
+ 5. Circuit Focus — Signal Garden [electronic, focused]
+    Compatibility: 69.83/100 | energy=0.67 (position target=0.67) | tempo=124 BPM
+    Why: energy fit 100%; genre fit 80%
+ 6. Kitchen Disco — Mirror Weekend [dance, happy]
+    Compatibility: 85.73/100 | energy=0.86 (position target=0.68) | tempo=122 BPM
+    Why: energy fit 82%; genre fit 100%
+ 7. Neon Ascent — Pulse Theory [electronic, euphoric]
+    Compatibility: 87.17/100 | energy=0.90 (position target=0.68) | tempo=128 BPM
+    Why: energy fit 78%; mood fit 100%
+ 8. Prism Pulse — Chromatic Avenue [dance, euphoric]
+    Compatibility: 90.94/100 | energy=0.94 (position target=0.69) | tempo=128 BPM
+    Why: energy fit 75%; genre fit 100%
+ 9. Salsa Satellite — Ritmo Claro [latin, energetic]
+    Compatibility: 81.27/100 | energy=0.85 (position target=0.69) | tempo=118 BPM
+    Why: energy fit 84%; genre fit 80%
+10. Golden Hour Drive — Sunset Arcade [synthwave, happy]
+    Compatibility: 65.86/100 | energy=0.70 (position target=0.70) | tempo=108 BPM
+    Why: energy fit 100%; mood fit 70%
+11. Calle Fuego — Los Vientos [reggaeton, energetic]
+    Compatibility: 83.90/100 | energy=0.88 (position target=0.70) | tempo=98 BPM
+    Why: energy fit 82%; genre fit 100%
+12. Launch Sequence — Motion Array [electronic, euphoric]
+    Compatibility: 86.33/100 | energy=0.93 (position target=0.71) | tempo=136 BPM
+    Why: energy fit 78%; mood fit 100%
+13. Second Wind — Peak Motion [electronic, energetic]
+    Compatibility: 78.35/100 | energy=0.92 (position target=0.71) | tempo=148 BPM
+    Why: energy fit 79%; genre fit 80%
+14. Block Party Signal — Common Frequency [hip-hop, happy]
+    Compatibility: 72.93/100 | energy=0.88 (position target=0.72) | tempo=110 BPM
+    Why: energy fit 84%; mood fit 70%
+15. Fireline Steps — Rapid Atlas [hip-hop, energetic]
+    Compatibility: 72.75/100 | energy=0.89 (position target=0.72) | tempo=142 BPM
+    Why: energy fit 83%; mood fit 70%
+16. Crown Me — Verse Kingdom [hip-hop, confident]
+    Compatibility: 58.15/100 | energy=0.78 (position target=0.73) | tempo=96 BPM
+    Why: energy fit 95%; genre fit 50%
+17. Champions Room — Gold Standard [pop, confident]
+    Compatibility: 68.44/100 | energy=0.91 (position target=0.73) | tempo=130 BPM
+    Why: energy fit 82%; genre fit 100%
+18. Blue Room Bounce — Harbor Trio [jazz, happy]
+    Compatibility: 61.89/100 | energy=0.61 (position target=0.74) | tempo=112 BPM
+    Why: energy fit 87%; mood fit 70%
+19. Gym Hero — Max Pulse [pop, intense]
+    Compatibility: 67.92/100 | energy=0.93 (position target=0.74) | tempo=132 BPM
+    Why: energy fit 81%; genre fit 100%
+20. Night Drive Loop — Neon Echo [synthwave, moody]
+    Compatibility: 48.56/100 | energy=0.75 (position target=0.75) | tempo=110 BPM
+    Why: energy fit 100%; tempo fit 91%
+21. Victory Lap — Northside Syntax [hip-hop, confident]
+    Compatibility: 57.59/100 | energy=0.84 (position target=0.75) | tempo=104 BPM
+    Why: energy fit 91%; tempo fit 88%
+22. Midnight Overpass — Vector Coast [synthwave, moody]
+    Compatibility: 47.84/100 | energy=0.79 (position target=0.76) | tempo=114 BPM
+    Why: energy fit 97%; tempo fit 93%
+23. Desert Highway — Amber Miles [rock, confident]
+    Compatibility: 47.70/100 | energy=0.72 (position target=0.76) | tempo=116 BPM
+    Why: energy fit 96%; tempo fit 94%
+24. Coastal Turn — Daytrip Cinema [indie pop, relaxed]
+    Compatibility: 59.29/100 | energy=0.58 (position target=0.77) | tempo=106 BPM
+    Why: energy fit 81%; genre fit 70%
+25. Summit Signal — Altitude Zero [electronic, intense]
+    Compatibility: 59.89/100 | energy=0.98 (position target=0.77) | tempo=160 BPM
+    Why: energy fit 79%; genre fit 80%
+26. Storm Runner — Voltline [rock, intense]
+    Compatibility: 43.21/100 | energy=0.91 (position target=0.78) | tempo=152 BPM
+    Why: energy fit 87%; tempo fit 86%
+27. City Windows — Metro Bloom [r&b, relaxed]
+    Compatibility: 51.51/100 | energy=0.55 (position target=0.78) | tempo=92 BPM
+    Why: energy fit 77%; genre fit 50%
+28. Steady State — Pattern Study [electronic, focused]
+    Compatibility: 57.05/100 | energy=0.48 (position target=0.79) | tempo=100 BPM
+    Why: energy fit 69%; genre fit 80%
+29. Final Rep — Core Anthem [rock, intense]
+    Compatibility: 41.66/100 | energy=0.96 (position target=0.79) | tempo=156 BPM
+    Why: energy fit 83%; tempo fit 83%
+30. Iron Descent — Black Anvil [metal, aggressive]
+    Compatibility: 40.48/100 | energy=0.97 (position target=0.80) | tempo=168 BPM
+    Why: energy fit 83%; tempo fit 77%
+31. Velvet Hours — Amara Blue [r&b, romantic]
+    Compatibility: 49.43/100 | energy=0.52 (position target=0.80) | tempo=88 BPM
+    Why: energy fit 72%; genre fit 50%
+32. Night Bloom — Velvet Circuit [r&b, romantic]
+    Compatibility: 48.37/100 | energy=0.49 (position target=0.81) | tempo=90 BPM
+    Why: energy fit 68%; genre fit 50%
+33. Midnight Coding — LoRoom [lofi, chill]
+    Compatibility: 32.24/100 | energy=0.42 (position target=0.81) | tempo=78 BPM
+    Why: energy fit 61%; tempo fit 73%
+34. Focus Flow — LoRoom [lofi, focused]
+    Compatibility: 31.54/100 | energy=0.40 (position target=0.82) | tempo=80 BPM
+    Why: energy fit 58%; tempo fit 74%
+35. Paper Planets — Desk Lamp Club [lofi, chill]
+    Compatibility: 30.58/100 | energy=0.38 (position target=0.82) | tempo=79 BPM
+    Why: energy fit 56%; tempo fit 74%
+36. Coffee Shop Stories — Slow Stereo [jazz, relaxed]
+    Compatibility: 30.94/100 | energy=0.37 (position target=0.83) | tempo=90 BPM
+    Why: energy fit 54%; tempo fit 80%
+37. Homeward Lights — Evening Lines [folk, reflective]
+    Compatibility: 30.08/100 | energy=0.36 (position target=0.83) | tempo=86 BPM
+    Why: energy fit 53%; tempo fit 78%
+38. Library Rain — Paper Lanterns [lofi, chill]
+    Compatibility: 28.38/100 | energy=0.35 (position target=0.84) | tempo=72 BPM
+    Why: energy fit 51%; tempo fit 70%
+39. Notebook Sunrise — Quiet Current [lofi, focused]
+    Compatibility: 27.84/100 | energy=0.33 (position target=0.84) | tempo=76 BPM
+    Why: energy fit 49%; tempo fit 72%
+40. Porch Light Letters — Willow Creek [folk, reflective]
+    Compatibility: 27.99/100 | energy=0.32 (position target=0.85) | tempo=84 BPM
+    Why: energy fit 47%; tempo fit 77%
+41. Last Light Cooldown — Soft Landing [ambient, chill]
+    Compatibility: 26.13/100 | energy=0.31 (position target=0.85) | tempo=68 BPM
+    Why: energy fit 46%; tempo fit 68%
+42. Window Seat Dreams — Soft Static [lofi, peaceful]
+    Compatibility: 25.75/100 | energy=0.29 (position target=0.86) | tempo=74 BPM
+    Why: energy fit 43%; tempo fit 71%
+43. Cloud Notes — Silver Pines [folk, peaceful]
+    Compatibility: 25.54/100 | energy=0.27 (position target=0.86) | tempo=82 BPM
+    Why: energy fit 41%; tempo fit 76%
+44. Spacewalk Thoughts — Orbit Bloom [ambient, chill]
+    Compatibility: 23.89/100 | energy=0.28 (position target=0.87) | tempo=60 BPM
+    Why: energy fit 41%; tempo fit 63%
+45. Quiet Geometry — Aster Ensemble [classical, focused]
+    Compatibility: 23.14/100 | energy=0.24 (position target=0.87) | tempo=70 BPM
+    Why: energy fit 37%; tempo fit 69%
+46. Slow Orbit — Lunar Fields [ambient, chill]
+    Compatibility: 21.73/100 | energy=0.22 (position target=0.88) | tempo=64 BPM
+    Why: energy fit 34%; tempo fit 66%
+47. Breathe Between — Willow Glass [ambient, relaxed]
+    Compatibility: 20.69/100 | energy=0.20 (position target=0.89) | tempo=62 BPM
+    Why: energy fit 31%; tempo fit 64%
+48. Morning Adagio — Elena Marchetti [classical, peaceful]
+    Compatibility: 20.15/100 | energy=0.18 (position target=0.89) | tempo=66 BPM
+    Why: energy fit 29%; tempo fit 67%
+49. Ocean Breathing — Blue Horizon [ambient, peaceful]
+    Compatibility: 18.61/100 | energy=0.16 (position target=0.90) | tempo=58 BPM
+    Why: tempo fit 62%; energy fit 26%
+50. Sunday Stillness — Meadow Frame [classical, peaceful]
+    Compatibility: 17.90/100 | energy=0.14 (position target=0.90) | tempo=60 BPM
+    Why: tempo fit 63%; energy fit 24%

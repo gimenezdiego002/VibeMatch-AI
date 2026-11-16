@@ -26,7 +26,7 @@ Gemini cannot select a song, create an ID, compute a score, alter metadata, chan
   - **Links and embedded player:** Spotify.
   - None of these values was checked against the recordings, and the services' terms were not independently verified.
   - **Mood is derived** by documented rules from valence, energy, and acousticness. These are the author's assumptions, not listener labels.
-  - **Language is an AI estimate.** Gemini labeled each track from its title, artist, album, and genre. Each row records `language_source` (`gemini estimate`, `rule estimate`, or `manual override`) and a confidence score, and corrections in `data/language_overrides.csv` always win. One label has already been corrected: a track with a featured vocalist was marked instrumental. Current estimates: 48 English, 14 Spanish, 9 Portuguese, and 24 in other languages or instrumental.
+  - **Language is an AI estimate.** Gemini labeled each track from its title, artist, album, and genre. Each row records `language_source` (`gemini estimate`, `rule estimate`, or `manual override`) and a confidence score, and corrections in `data/language_overrides.csv` always win. One label has already been corrected: a track with a featured vocalist was marked instrumental. Current estimates: 49 English, 14 Spanish, 9 Portuguese, and 23 in other languages or instrumental.
 
 No personal data, listening history, protected traits, lyrics, likes, skips, location, or account data is collected or used.
 
