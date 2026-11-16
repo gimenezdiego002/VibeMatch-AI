@@ -132,6 +132,18 @@ def test_verify_rejects_invented_ids_numbers_and_incomplete_answers(text, cited,
     assert reason in verify_ai_answer(text, cited, RECORDS, 2)
 
 
+def test_verify_requires_the_values_that_were_asked_for():
+    vague = "Sunrise and Fuego Lento are in the playlist."
+    assert "did not give the tempo bpm" in verify_ai_answer(vague, [1, 2], RECORDS, 2, required_fields=("tempo_bpm",))
+    specific = "Sunrise is 100 BPM and Fuego Lento is 128 BPM."
+    assert verify_ai_answer(specific, [1, 2], RECORDS, 2, required_fields=("tempo_bpm",)) is None
+
+
+def test_verify_count_answers_need_only_the_count():
+    assert verify_ai_answer("There are 2 matching songs.", [1, 2], RECORDS, 2, required_fields=("language",), intent="count") is None
+    assert "did not state the count" in verify_ai_answer("A couple of songs.", [1, 2], RECORDS, 2, intent="count")
+
+
 class FakeGemini:
     def __init__(self, query=None, reply=None, parse_error=None):
         self.query, self.reply, self.parse_error = query, reply, parse_error

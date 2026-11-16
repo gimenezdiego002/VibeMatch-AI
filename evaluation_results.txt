@@ -1,35 +1,117 @@
-VibeMatch AI offline evaluation
-Run date: 2026-11-16
-Command: python evaluation.py
+VibeMatch AI evaluation - run date 2026-11-16
+Command: python evaluation.py --live
+Modes: offline fallback and mocked Gemini need no network; LIVE results are labeled.
 
+PART 1 - fictional catalog scenarios (offline fallback)
 Catalog records: 50
 
 WORKOUT: Make a 10-song high-energy gym workout with a warm-up and cooldown
 activity=workout; length=10; structure=warmup_peak_cooldown
-ids=[19, 3, 5, 30, 42, 47, 26, 15, 22, 37]
-energies=[0.67, 0.91, 0.93, 0.96, 0.98, 0.93, 0.92, 0.9, 0.72, 0.48]
+ids=[41, 3, 5, 30, 42, 26, 17, 15, 19, 37]
+energies=[0.58, 0.91, 0.93, 0.96, 0.98, 0.92, 0.97, 0.9, 0.67, 0.48]
 catalog_only=True
 unique_ids=True
 deterministic=True
 
 STUDY: Give me 10 relaxing low-energy songs for studying with a steady feel
 activity=studying; length=10; structure=consistent
-ids=[31, 24, 9, 21, 50, 6, 4, 40, 29, 38]
-energies=[0.33, 0.24, 0.4, 0.29, 0.31, 0.28, 0.35, 0.38, 0.22, 0.2]
+ids=[31, 24, 9, 50, 6, 4, 40, 29, 21, 38]
+energies=[0.33, 0.24, 0.4, 0.31, 0.28, 0.35, 0.38, 0.22, 0.29, 0.2]
 catalog_only=True
 unique_ids=True
 deterministic=True
 
 RELAX: Create 8 peaceful songs for relaxing after work
 activity=relaxing; length=8; structure=consistent
-ids=[35, 21, 25, 29, 38, 6, 12, 50]
-energies=[0.27, 0.29, 0.16, 0.22, 0.2, 0.28, 0.18, 0.31]
+ids=[35, 21, 25, 29, 38, 6, 50, 4]
+energies=[0.27, 0.29, 0.16, 0.22, 0.2, 0.28, 0.31, 0.35]
 catalog_only=True
 unique_ids=True
 deterministic=True
 
-Automated test command: python -m pytest -q
-Result (2026-11-16, after the 50-song cap and redesign): 91 passed (mocked network)
 
-Note: These results intentionally use offline mode. No live Gemini call was claimed
-because no API credential is committed to the repository.
+PART 2 - real catalog: language and release-year constraints
+Catalog records: 95; spanish=14; portuguese=9 (language labels are estimates)
+
+SPANISH WORKOUT: I am working out I want 15 songs all in spanish kinda recent
+  [offline fallback] interpretation=local; language=spanish (hard); years=2021-None; structure=warmup_peak_cooldown
+    returned=14 of requested=15; spanish_share=100%; released_2021_or_later=14%; catalog_only=True; unique_ids=True
+    deterministic=True
+    warning: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+    constraint_read_correctly=True
+  [mocked Gemini] interpretation=Gemini; language=spanish (hard); years=2021-None; structure=warmup_peak_cooldown
+    returned=14 of requested=15; spanish_share=100%; released_2021_or_later=14%; catalog_only=True; unique_ids=True
+    deterministic=True
+    warning: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+    constraint_read_correctly=True
+
+RECENT PARTY: only new songs for a party, 10 songs
+  [offline fallback] interpretation=local; language=None; years=2021-None (hard); structure=build
+    returned=10 of requested=10; released_2021_or_later=100%; catalog_only=True; unique_ids=True
+    deterministic=True
+    constraint_read_correctly=True
+
+SOFT SPANISH: preferably spanish party mix 12
+  [offline fallback] interpretation=local; language=spanish (soft); years=None-None; structure=build
+    returned=12 of requested=12; spanish_share=50%; catalog_only=True; unique_ids=True
+    deterministic=True
+    constraint_read_correctly=True
+
+SHORTAGE: 20 songs all in portuguese for running
+  [offline fallback] interpretation=local; language=portuguese (hard); years=None-None; structure=warmup_peak_cooldown
+    returned=9 of requested=20; portuguese_share=100%; catalog_only=True; unique_ids=True
+    deterministic=True
+    warning: Only 9 Portuguese songs fit this catalog; returning 9 instead of 20.
+    constraint_read_correctly=True
+
+  [LIVE Gemini] spanish workout
+    interpretation=Gemini; language=spanish hard=True; years>=2019
+    returned=14 of requested=15; spanish_share=100%; released_2019_or_later=50%; catalog_only=True; unique_ids=True
+    note: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+    note: Gemini explanations failed (ClientError); showing deterministic reasons.
+
+
+PART 3 - catalog chatbot (retrieval first; AI answers verified)
+Playlist for '#N' questions: Make a 10-song high-energy gym workout with a warm-up and cooldown
+
+  [offline]
+    PASS [Catalog lookup] What album is #1 from? -> #1 Nothing's Gonna Change My Love for You by George Benson: from the album “20/20”.
+    PASS [Catalog lookup] Which songs are over 140 BPM? -> 2 songs match:
+    PASS [Catalog lookup] Is there anything quieter than #3? -> 6 songs are quieter than #3 Shoot to Thrill by AC/DC (energy 0.90):
+    PASS [Catalog lookup] How many Spanish songs do you have in the catalog? -> 14 songs in this catalog match.
+    PASS [Catalog lookup] When was Blinding Lights released? -> Blinding Lights by The Weeknd: released in 2020.
+    PASS [Catalog lookup] What are the lyrics of #2? -> The catalog doesn't contain that. I can only answer from each song's title, artist, album,
+    PASS [Catalog lookup] Did Avril Lavigne win a Grammy? -> The catalog doesn't contain that. I can only answer from each song's title, artist, album,
+    PASS [Catalog lookup] Tell me about song #40 -> There is no song #40 in the current playlist.
+    answer_correct=8/8; refusal_correct=8/8; shown_citations_valid=True; ai_answers_shown=0; ai_answers_rejected=0
+
+  [mocked Gemini]
+    PASS [AI answer] What album is #1 from? -> Here is what the catalog has: Nothing's Gonna Change My Love for You (album 20/20, 1985, 1
+    PASS [AI answer] Which songs are over 140 BPM? -> Here is what the catalog has: Shoot to Thrill (album Back In Black, 2014, 141 BPM, energy 
+    PASS [Catalog lookup] Is there anything quieter than #3? -> 6 songs are quieter than #3 Shoot to Thrill by AC/DC (energy 0.90):
+         note: The AI answer was discarded because it did not give the energy that was asked for; showing a catalog lookup in
+    PASS [AI answer] How many Spanish songs do you have in the catalog? -> There are 14 matching songs in the catalog.
+    PASS [Catalog lookup] When was Blinding Lights released? -> Blinding Lights by The Weeknd: released in 2020.
+         note: The AI answer was discarded because it cited song ID 999, which was not retrieved; showing a catalog lookup in
+    PASS [Catalog lookup] What are the lyrics of #2? -> The catalog doesn't contain that. I can only answer from each song's title, artist, album,
+    PASS [Catalog lookup] Did Avril Lavigne win a Grammy? -> The catalog doesn't contain that. I can only answer from each song's title, artist, album,
+    PASS [Catalog lookup] Tell me about song #40 -> There is no song #40 in the current playlist.
+    answer_correct=8/8; refusal_correct=8/8; shown_citations_valid=True; ai_answers_shown=3; ai_answers_rejected=2
+
+  [LIVE Gemini]
+    PASS [Catalog lookup] What album is #1 from? -> #1 Nothing's Gonna Change My Love for You by George Benson: from the album “20/20”.
+         note: Gemini could not read the question (ClientError); used the local parser.
+    PASS [AI answer] Which songs are over 140 BPM? -> Six songs are over 140 BPM: "A Lot More Free" (143 BPM), "Silver Lining" (144 BPM), "You C
+    PASS [Catalog lookup] Is there anything quieter than #3? -> 6 songs are quieter than #3 Shoot to Thrill by AC/DC (energy 0.90):
+         note: Gemini could not read the question (ClientError); used the local parser.
+    PASS [Catalog lookup] How many Spanish songs do you have in the catalog? -> 14 songs in this catalog match.
+         note: Gemini could not read the question (ClientError); used the local parser.
+    PASS [Catalog lookup] When was Blinding Lights released? -> Blinding Lights by The Weeknd: released in 2020.
+         note: Gemini could not read the question (ClientError); used the local parser.
+    PASS [Catalog lookup] What are the lyrics of #2? -> The catalog doesn't contain that. I can only answer from each song's title, artist, album,
+         note: Gemini could not read the question (ClientError); used the local parser.
+    PASS [Catalog lookup] Did Avril Lavigne win a Grammy? -> The catalog doesn't contain that. I can only answer from each song's title, artist, album,
+         note: Gemini could not read the question (ClientError); used the local parser.
+    PASS [Catalog lookup] Tell me about song #40 -> There is no song #40 in the current playlist.
+         note: Gemini could not read the question (ClientError); used the local parser.
+    answer_correct=8/8; refusal_correct=8/8; shown_citations_valid=True; ai_answers_shown=1; ai_answers_rejected=0

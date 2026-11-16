@@ -311,12 +311,15 @@ def verify_ai_answer(
     records: Sequence[dict[str, Any]],
     total: int,
     reference: dict[str, Any] | None = None,
+    required_fields: Sequence[str] = (),
+    intent: str = "lookup",
 ) -> str | None:
-    """Return None when the answer is grounded and complete, or a reason it was rejected.
+    """Return None when the answer is grounded, complete, and on-topic, or a reason it was rejected.
 
     Grounded: every cited ID was retrieved (or is the comparison's reference song) and every
     number quoted appears in those records. Complete: every retrieved song is cited, so an
-    answer cannot pass by quietly answering a different, narrower question.
+    answer cannot pass by quietly answering a different, narrower question. On-topic: the
+    values the question asked for (album, BPM, year, the count...) actually appear.
     """
     context = [*records, *([reference] if reference else [])]
     allowed_ids = {r["id"] for r in context}
@@ -328,6 +331,18 @@ def verify_ai_answer(
     missing = [r["id"] for r in records if r["id"] not in set(cited_ids)]
     if missing:
         return f"it left out {len(missing)} of the {len(records)} matching songs"
+    lowered = text.casefold()
+    if intent == "count":
+        # For "how many" the count is the answer; per-song details are not required.
+        return None if str(total) in lowered else f"it did not state the count ({total})"
+    for record in records:
+        for name in required_fields:
+            value = record.get(name)
+            if value is None or name in ("title", "artist"):
+                continue
+            accepted = {f"{value:.2f}", f"{value:.1f}"} if name == "energy" else {str(value).casefold()}
+            if not any(option.casefold() in lowered for option in accepted):
+                return f"it did not give the {name.replace('_', ' ')} that was asked for"
     allowed_numbers: set[str] = {str(total), str(len(records))}
     for r in context:
         allowed_numbers.update(str(v) for v in (r["id"], r["rank"], r["release_year"], r["tempo_bpm"]) if v is not None)
@@ -486,7 +501,7 @@ def answer_question(
             reply = gemini.answer_from_records(question, records=records, total_matches=total, reference=reference)
             text = str(reply.get("answer", "")).strip()
             cited_ids = tuple(int(i) for i in reply.get("cited_ids", []) if isinstance(i, int))
-            problem = verify_ai_answer(text, cited_ids, records, total, reference)
+            problem = verify_ai_answer(text, cited_ids, records, total, reference, query.fields, query.intent)
             if problem is None:
                 return ChatAnswer(text=text, source="AI answer", records=tuple(records), cited_ids=cited_ids,
                                   total_matches=total, warnings=tuple(warnings))
