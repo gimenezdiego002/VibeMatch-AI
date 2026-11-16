@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# Virtual environments
+# Virtual environments and local secrets
+.env
 .venv/
 env/
 venv/
@@ -13,3 +14,6 @@ venv/
 
 # Pytest cache
 .pytest_cache/
+
+# Streamlit secrets (copy .streamlit/secrets.toml.example instead)
+.streamlit/secrets.toml

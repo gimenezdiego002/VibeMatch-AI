@@ -1,0 +1,27 @@
+flowchart TD
+    U[User natural-language request] --> CLI[CLI]
+    U --> UI[Streamlit dashboard form]
+    UI --> CLI_ORCH[create_playlist orchestrator]
+    CLI --> CLI_ORCH
+    CLI_ORCH --> GI[Gemini intent interpreter]
+    GI --> PV{Schema and semantic validation}
+    GI -. API error or invalid JSON .-> FB[Local keyword fallback]
+    FB --> PV
+    PV --> PF[Validated PreferenceProfile]
+    PF --> SE[Python scoring engine]
+    CSV[(Local synthetic songs.csv)] --> CV{CSV range and type guardrails}
+    RCSV[(Optional real_songs.csv, built once)] --> CV
+    BLD[build_real_catalog.py: ReccoBeats features + Deezer covers, filters, derived mood] -. one-time, reviewed by a person .-> RCSV
+    CV --> SE
+    SE --> PG[Playlist generator]
+    PG --> DV[Artist diversity and energy-curve ordering]
+    DV --> GX[Gemini explanation service]
+    GX --> EV{Selected-ID coverage validation}
+    GX -. API error or invalid output .-> DR[Deterministic score reasons]
+    EV --> OUT[Ordered playlist and warnings]
+    DR --> OUT
+    OUT --> SC{Dashboard system checks: catalog IDs, uniqueness, length, determinism}
+    SC --> MEDIA[Cards, covers, Spotify links and sourced notes from catalog fields; previews fetched fresh]
+    MEDIA --> HR[Human review / listener choice]
+    OUT --> HR
+    OUT --> TEST[Automated tests and offline evaluation]

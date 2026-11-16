@@ -71,7 +71,7 @@ def test_explain_recommendation_returns_non_empty_string():
 def test_load_songs_converts_numeric_fields():
     songs = load_songs("data/songs.csv")
 
-    assert len(songs) == 17
+    assert len(songs) == 50
     assert isinstance(songs[0]["id"], int)
     assert isinstance(songs[0]["tempo_bpm"], int)
     assert isinstance(songs[0]["energy"], float)

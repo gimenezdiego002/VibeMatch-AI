@@ -16,3 +16,36 @@ id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
 15,Neon Ascent,Pulse Theory,electronic,euphoric,0.90,128,0.91,0.85,0.04
 16,Velvet Hours,Amara Blue,r&b,romantic,0.52,88,0.74,0.70,0.34
 17,Iron Descent,Black Anvil,metal,aggressive,0.97,168,0.28,0.45,0.03
+18,Prism Pulse,Chromatic Avenue,dance,euphoric,0.94,128,0.91,0.93,0.04
+19,Circuit Focus,Signal Garden,electronic,focused,0.67,124,0.63,0.72,0.12
+20,Victory Lap,Northside Syntax,hip-hop,confident,0.84,104,0.76,0.89,0.09
+21,Window Seat Dreams,Soft Static,lofi,peaceful,0.29,74,0.62,0.55,0.88
+22,Desert Highway,Amber Miles,rock,confident,0.72,116,0.68,0.64,0.19
+23,Afterglow Avenue,Nova June,pop,euphoric,0.87,126,0.89,0.86,0.11
+24,Quiet Geometry,Aster Ensemble,classical,focused,0.24,70,0.51,0.19,0.95
+25,Ocean Breathing,Blue Horizon,ambient,peaceful,0.16,58,0.70,0.31,0.96
+26,Second Wind,Peak Motion,electronic,energetic,0.92,148,0.83,0.87,0.03
+27,Golden Hour Drive,Sunset Arcade,synthwave,happy,0.70,108,0.80,0.75,0.21
+28,Open Road Chorus,Maple Radio,indie pop,happy,0.73,120,0.85,0.80,0.29
+29,Slow Orbit,Lunar Fields,ambient,chill,0.22,64,0.66,0.38,0.94
+30,Final Rep,Core Anthem,rock,intense,0.96,156,0.55,0.69,0.05
+31,Notebook Sunrise,Quiet Current,lofi,focused,0.33,76,0.61,0.57,0.84
+32,City Windows,Metro Bloom,r&b,relaxed,0.55,92,0.78,0.74,0.32
+33,Fireline Steps,Rapid Atlas,hip-hop,energetic,0.89,142,0.71,0.85,0.07
+34,Kitchen Disco,Mirror Weekend,dance,happy,0.86,122,0.93,0.95,0.06
+35,Cloud Notes,Silver Pines,folk,peaceful,0.27,82,0.69,0.46,0.91
+36,Midnight Overpass,Vector Coast,synthwave,moody,0.79,114,0.52,0.77,0.15
+37,Steady State,Pattern Study,electronic,focused,0.48,100,0.57,0.64,0.25
+38,Breathe Between,Willow Glass,ambient,relaxed,0.20,62,0.74,0.34,0.97
+39,Champions Room,Gold Standard,pop,confident,0.91,130,0.88,0.90,0.04
+40,Paper Planets,Desk Lamp Club,lofi,chill,0.38,79,0.64,0.61,0.81
+41,Coastal Turn,Daytrip Cinema,indie pop,relaxed,0.58,106,0.82,0.76,0.37
+42,Summit Signal,Altitude Zero,electronic,intense,0.98,160,0.79,0.83,0.02
+43,Salsa Satellite,Ritmo Claro,latin,energetic,0.85,118,0.92,0.94,0.10
+44,Homeward Lights,Evening Lines,folk,reflective,0.36,86,0.53,0.50,0.90
+45,Blue Room Bounce,Harbor Trio,jazz,happy,0.61,112,0.86,0.71,0.62
+46,Night Bloom,Velvet Circuit,r&b,romantic,0.49,90,0.77,0.73,0.40
+47,Launch Sequence,Motion Array,electronic,euphoric,0.93,136,0.90,0.88,0.03
+48,Sunday Stillness,Meadow Frame,classical,peaceful,0.14,60,0.65,0.18,0.98
+49,Block Party Signal,Common Frequency,hip-hop,happy,0.88,110,0.87,0.92,0.06
+50,Last Light Cooldown,Soft Landing,ambient,chill,0.31,68,0.72,0.43,0.89

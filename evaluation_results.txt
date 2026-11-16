@@ -1,0 +1,35 @@
+VibeMatch AI offline evaluation
+Run date: 2026-11-16
+Command: python evaluation.py
+
+Catalog records: 50
+
+WORKOUT: Make a 10-song high-energy gym workout with a warm-up and cooldown
+activity=workout; length=10; structure=warmup_peak_cooldown
+ids=[19, 3, 5, 30, 42, 47, 26, 15, 22, 37]
+energies=[0.67, 0.91, 0.93, 0.96, 0.98, 0.93, 0.92, 0.9, 0.72, 0.48]
+catalog_only=True
+unique_ids=True
+deterministic=True
+
+STUDY: Give me 10 relaxing low-energy songs for studying with a steady feel
+activity=studying; length=10; structure=consistent
+ids=[31, 24, 9, 21, 50, 6, 4, 40, 29, 38]
+energies=[0.33, 0.24, 0.4, 0.29, 0.31, 0.28, 0.35, 0.38, 0.22, 0.2]
+catalog_only=True
+unique_ids=True
+deterministic=True
+
+RELAX: Create 8 peaceful songs for relaxing after work
+activity=relaxing; length=8; structure=consistent
+ids=[35, 21, 25, 29, 38, 6, 12, 50]
+energies=[0.27, 0.29, 0.16, 0.22, 0.2, 0.28, 0.18, 0.31]
+catalog_only=True
+unique_ids=True
+deterministic=True
+
+Automated test command: python -m pytest -q
+Result (2026-11-16, after the 50-song cap and redesign): 91 passed (mocked network)
+
+Note: These results intentionally use offline mode. No live Gemini call was claimed
+because no API credential is committed to the repository.

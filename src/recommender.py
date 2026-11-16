@@ -1,5 +1,6 @@
 import csv
 from dataclasses import asdict, dataclass
+import math
 from typing import Dict, List, Tuple
 
 @dataclass
@@ -53,8 +54,9 @@ class Recommender:
         return "; ".join(reasons)
 
 def load_songs(csv_path: str) -> List[Dict]:
-    """Load songs from CSV and convert numeric fields to Python numbers."""
+    """Load and validate songs from CSV, converting numeric fields."""
     songs = []
+    seen_ids = set()
     float_fields = {
         "energy",
         "valence",
@@ -63,11 +65,22 @@ def load_songs(csv_path: str) -> List[Dict]:
     }
 
     with open(csv_path, newline="", encoding="utf-8") as csv_file:
-        for row in csv.DictReader(csv_file):
-            row["id"] = int(row["id"])
-            row["tempo_bpm"] = int(row["tempo_bpm"])
+        for line_number, row in enumerate(csv.DictReader(csv_file), start=2):
+            try:
+                row["id"] = int(row["id"])
+                row["tempo_bpm"] = int(row["tempo_bpm"])
+                for field in float_fields:
+                    row[field] = float(row[field])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(f"Invalid numeric song data on CSV line {line_number}.") from exc
+            if row["id"] in seen_ids:
+                raise ValueError(f"Duplicate song id {row['id']} on CSV line {line_number}.")
+            if not 40 <= row["tempo_bpm"] <= 220:
+                raise ValueError(f"tempo_bpm must be between 40 and 220 on CSV line {line_number}.")
             for field in float_fields:
-                row[field] = float(row[field])
+                if not math.isfinite(row[field]) or not 0.0 <= row[field] <= 1.0:
+                    raise ValueError(f"{field} must be between 0 and 1 on CSV line {line_number}.")
+            seen_ids.add(row["id"])
             songs.append(row)
 
     return songs

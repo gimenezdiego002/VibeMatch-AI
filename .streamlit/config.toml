@@ -1,0 +1,40 @@
+# Streamlit configuration for the VibeMatch AI dashboard.
+#
+# Design system ("Midnight Vinyl"): deep plum base, electric-violet primary, warm coral
+# secondary, used together only as a gradient accent. Every text/background pairing was
+# checked for WCAG AA contrast (see README). Layout polish Streamlit cannot do natively lives
+# in assets/vibematch.css, one small removable file.
+
+[theme]
+base = "dark"
+primaryColor = "#9d8cff"
+backgroundColor = "#0d0a1a"
+secondaryBackgroundColor = "#191430"
+textColor = "#f4f0ff"
+linkColor = "#ff9a6b"
+borderColor = "#2a2347"
+dataframeBorderColor = "#2a2347"
+dataframeHeaderBackgroundColor = "#14102a"
+baseRadius = "large"
+buttonRadius = "full"
+showWidgetBorder = true
+showSidebarBorder = false
+
+# Inter for reading, Space Grotesk for display text. Falls back to the system UI font offline.
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, system-ui, sans-serif"
+headingFont = "'Space Grotesk':https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap, system-ui, sans-serif"
+headingFontWeights = [700, 650, 600, 600, 600, 600]
+metricValueFontWeight = 600
+
+chartCategoricalColors = ["#9d8cff", "#ff9a6b", "#5ee0c8", "#ff7ab6", "#7fb5ff", "#ffd36b"]
+chartSequentialColors = ["#1f1838", "#2f2560", "#43348a", "#5a46b3", "#7660d6", "#9d8cff", "#b8a6ff", "#cfc2ff", "#e3dbff", "#f4f0ff"]
+
+[theme.sidebar]
+backgroundColor = "#110d22"
+secondaryBackgroundColor = "#1c1636"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

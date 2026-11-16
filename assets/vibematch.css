@@ -1,0 +1,268 @@
+/* =====================================================================
+   VibeMatch AI: the ONLY custom CSS in the project ("Midnight Vinyl").
+   Loaded by streamlit_app.py with st.html(Path("assets/vibematch.css")).
+   To remove it: delete this file and the one st.html(CSS_FILE) line. The app
+   still works and falls back to the theme in .streamlit/config.toml.
+
+   Rules followed (emil-design-eng / apple-design):
+   - Motion: transform and opacity only, 120-180ms strong ease-out, hover gated
+     to real pointers, nothing animates on page load or rerun.
+   - Surfaces: translucent layers with blur, solid under reduced transparency,
+     stronger edges under prefers-contrast: more.
+   - Type: tighter tracking as size grows, looser tracking on small caps.
+   - Selectors: prefer st.container(key=...) classes (st-key-*). Selectors that
+     rely on Streamlit's internal markup are marked FRAGILE below.
+   ===================================================================== */
+
+:root {
+  --vm-bg: #0d0a1a;
+  --vm-surface: #191430;
+  --vm-text: #f4f0ff;
+  --vm-muted: #b4abd3;
+  --vm-violet: #9d8cff;
+  --vm-pink: #ff7ab6;
+  --vm-coral: #ff9a6b;
+  --vm-ink: #120c26;               /* dark text on bright accents (6.9:1 or better) */
+  --vm-line: rgba(255, 255, 255, 0.08);
+  --vm-glass: rgba(29, 23, 56, 0.62);
+  --vm-accent: linear-gradient(120deg, var(--vm-violet) 0%, var(--vm-pink) 55%, var(--vm-coral) 100%);
+  --vm-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --vm-radius-lg: 22px;
+  --vm-radius-md: 16px;
+  --vm-radius-sm: 10px;
+}
+
+/* ---------- Atmosphere: two soft glows on the page background. FRAGILE: .stApp ---------- */
+.stApp {
+  background:
+    radial-gradient(900px 520px at 8% -8%, rgba(157, 140, 255, 0.20), transparent 60%),
+    radial-gradient(760px 480px at 100% 0%, rgba(255, 122, 182, 0.12), transparent 60%),
+    var(--vm-bg);
+  background-attachment: fixed;
+}
+
+/* ---------- Typography: size-specific tracking ---------- */
+.stApp h1 { letter-spacing: -0.035em; line-height: 1.04; }
+.stApp h2 { letter-spacing: -0.025em; }
+.stApp h3 { letter-spacing: -0.015em; }
+.vm-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vm-muted);
+}
+.vm-eyebrow b { color: var(--vm-coral); font-weight: 600; }
+
+/* ---------- Hero ---------- */
+.st-key-vm-hero {
+  padding: 1.6rem 1.8rem 1.3rem;
+  border-radius: var(--vm-radius-lg);
+  border: 1px solid var(--vm-line);
+  background:
+    linear-gradient(135deg, rgba(157, 140, 255, 0.16), rgba(255, 122, 182, 0.08) 55%, rgba(255, 154, 107, 0.06)),
+    var(--vm-glass);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+.st-key-vm-hero h1 {
+  font-size: clamp(2.5rem, 4.2vw, 3.6rem);
+  background: var(--vm-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- Composer (the main action) ---------- */
+.st-key-vm-composer {
+  border-radius: var(--vm-radius-lg) !important;
+  background: linear-gradient(180deg, rgba(157, 140, 255, 0.07), rgba(255, 255, 255, 0.015));
+  box-shadow: 0 24px 60px -36px rgba(157, 140, 255, 0.55);
+}
+
+/* Primary actions wear the accent gradient with dark ink. FRAGILE: data-testid on buttons. */
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-primaryFormSubmit"] {
+  background: var(--vm-accent) !important;
+  border: 0 !important;
+  color: var(--vm-ink) !important;
+  font-weight: 650;
+  box-shadow: 0 10px 28px -14px rgba(255, 122, 182, 0.75);
+}
+[data-testid="stBaseButton-primary"] *,
+[data-testid="stBaseButton-primaryFormSubmit"] * { color: var(--vm-ink) !important; }
+
+/* Pressable controls give instant feedback. FRAGILE: generic button/link selectors. */
+.stApp button, .stApp a[data-testid^="stBaseLinkButton"] {
+  transition: transform 120ms var(--vm-ease-out), opacity 120ms var(--vm-ease-out);
+}
+.stApp button:active, .stApp a[data-testid^="stBaseLinkButton"]:active { transform: scale(0.97); }
+
+/* ---------- Playlist grid: 3 columns on a laptop, 2 mid-width, 1 narrow ---------- */
+.st-key-vm-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+/* Let each card fill its grid cell instead of the 300px native fallback width.
+   FRAGILE: relies on cards being the grid's direct children or their wrappers. */
+.st-key-vm-grid > * { width: auto !important; max-width: none !important; min-width: 0 !important; }
+.st-key-vm-grid [class*="st-key-vmcard"] { width: 100% !important; height: 100%; }
+
+/* ---------- Playlist cards ---------- */
+[class*="st-key-vmcard"] {
+  border-radius: var(--vm-radius-lg) !important;
+  border-color: var(--vm-line) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012));
+  transition: transform 180ms var(--vm-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  [class*="st-key-vmcard"]:hover { transform: translateY(-3px); }
+}
+[class*="st-key-vmcard-active"] {
+  border-color: rgba(157, 140, 255, 0.85) !important;
+  background:
+    linear-gradient(180deg, rgba(157, 140, 255, 0.16), rgba(255, 122, 182, 0.05)),
+    rgba(255, 255, 255, 0.02);
+  box-shadow: 0 0 0 1px rgba(157, 140, 255, 0.35), 0 22px 50px -24px rgba(157, 140, 255, 0.8);
+}
+
+/* Cover art: square, rounded, lifted. FRAGILE: stImage markup. */
+.stApp [data-testid="stImage"] img {
+  border-radius: var(--vm-radius-md);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  box-shadow: 0 16px 34px -18px rgba(0, 0, 0, 0.85);
+}
+
+/* Generated tile for songs without a cover (fictional catalog). */
+.vm-tile {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  border-radius: var(--vm-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 16px 34px -18px rgba(0, 0, 0, 0.85);
+}
+
+/* Title block: long titles clamp to two lines instead of breaking the grid. */
+.vm-title {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1.08rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vm-sub {
+  color: var(--vm-muted);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Meta row: rank chip, score pill, tags. */
+.vm-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.vm-rank {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--vm-line);
+  color: var(--vm-muted);
+  font-variant-numeric: tabular-nums;
+}
+.vm-score {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--vm-accent);
+  color: var(--vm-ink);
+  font-variant-numeric: tabular-nums;
+}
+.vm-tags { font-size: 0.82rem; color: var(--vm-muted); }
+
+/* Energy meter: fill = actual energy, tick = this position's target. */
+.vm-meter {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: visible;
+  margin: 0.35rem 0 0.3rem;
+}
+.vm-meter > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--vm-accent);
+}
+.vm-meter > i {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--vm-text);
+  box-shadow: 0 0 0 2px rgba(13, 10, 26, 0.7);
+  transform: translateX(-1px);
+}
+.vm-meter-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--vm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Sidebar: now playing as a glass panel ---------- */
+.st-key-vm-nowplaying {
+  padding: 1rem;
+  border-radius: var(--vm-radius-lg);
+  border: 1px solid var(--vm-line);
+  background:
+    linear-gradient(180deg, rgba(157, 140, 255, 0.14), rgba(255, 122, 182, 0.05)),
+    var(--vm-glass);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 24px 60px -30px rgba(157, 140, 255, 0.6);
+}
+.st-key-vm-nowplaying .vm-title { font-size: 1.25rem; -webkit-line-clamp: 3; }
+
+/* ---------- Accessibility preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  [class*="st-key-vmcard"], .stApp button, .stApp a[data-testid^="stBaseLinkButton"] { transition: none; }
+  [class*="st-key-vmcard"]:hover, .stApp button:active,
+  .stApp a[data-testid^="stBaseLinkButton"]:active { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .st-key-vm-hero, .st-key-vm-nowplaying {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--vm-surface);
+  }
+}
+@media (prefers-contrast: more) {
+  :root { --vm-line: rgba(255, 255, 255, 0.45); --vm-muted: #e2dcf7; }
+  .st-key-vm-hero h1 { background: none; color: var(--vm-text); }
+  [class*="st-key-vmcard"], .st-key-vm-hero, .st-key-vm-nowplaying, .st-key-vm-composer {
+    background: var(--vm-surface);
+    border: 1px solid var(--vm-line) !important;
+  }
+}
