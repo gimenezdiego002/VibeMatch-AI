@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import date
 import importlib.util
 import json
 import os
 from typing import Any, Mapping, Sequence
 
 from src.playlist import PlaylistResult
-from src.profiles import MAX_PLAYLIST_LENGTH, PreferenceProfile, validate_profile
+from src.profiles import MAX_PLAYLIST_LENGTH, PRIORITY_FEATURES, PreferenceProfile, validate_profile
 
 
 PROFILE_SCHEMA = {
@@ -26,6 +27,32 @@ PROFILE_SCHEMA = {
     "required": ["activity", "playlist_length", "preferred_genres", "target_mood", "target_energy", "target_tempo_bpm", "playlist_structure"],
     "additionalProperties": False,
 }
+
+
+def profile_schema(languages: Sequence[str], current_year: int) -> dict[str, Any]:
+    """PROFILE_SCHEMA plus optional constraints whose language enum comes from the catalog."""
+    schema = json.loads(json.dumps(PROFILE_SCHEMA))  # deep copy; PROFILE_SCHEMA stays the base contract
+    year = {"type": "integer", "minimum": 0, "maximum": current_year}
+    schema["properties"].update(
+        {
+            "steady_requested": {"type": "boolean"},
+            "language": {"type": "string", "enum": ["none", *languages]},
+            "language_strict": {"type": "boolean"},
+            "min_release_year": year,
+            "max_release_year": year,
+            "recency_strict": {"type": "boolean"},
+            "priorities": {
+                "type": "object",
+                "properties": {f: {"type": "number", "minimum": 0, "maximum": 1} for f in PRIORITY_FEATURES},
+                "additionalProperties": False,
+            },
+        }
+    )
+    schema["required"] = [
+        *PROFILE_SCHEMA["required"],
+        "steady_requested", "language", "language_strict", "min_release_year", "max_release_year", "recency_strict",
+    ]
+    return schema
 
 
 class GeminiService:
@@ -80,19 +107,34 @@ class GeminiService:
         *,
         supported_genres: set[str],
         supported_moods: set[str],
+        supported_languages: set[str] | None = None,
+        catalog_has_years: bool = False,
     ) -> tuple[PreferenceProfile, list[str]]:
         """Convert free text to a validated profile using structured output."""
+        year = date.today().year
+        languages = sorted(supported_languages or ())
         prompt = (
             "Interpret this playlist request. Infer reasonable preferences. "
             f"Use only these genres: {sorted(supported_genres)}. "
-            f"Use only these moods: {sorted(supported_moods)}.\nRequest: {request}"
+            f"Use only these moods: {sorted(supported_moods)}.\n"
+            "Constraints:\n"
+            f"- language: the language the lyrics should be in, one of {languages or ['none']}, or 'none' if the "
+            "user did not ask for one. language_strict is true when the user wants ALL songs in it "
+            "('all in Spanish', 'only Spanish', 'Spanish songs'), false for a soft wish ('preferably', 'some').\n"
+            f"- min_release_year / max_release_year: the current year is {year}. 'recent' or 'new' means "
+            f"min_release_year={year - 5}; a decade like 'the 90s' means 1990 to 1999; use 0 when not asked. "
+            "recency_strict is true only for wording like 'only new songs'.\n"
+            "- steady_requested: true only if the user explicitly asks for steady or consistent energy.\n"
+            "- priorities (optional): how much this user cares about each factor, 0 to 1. "
+            "Do not score songs.\n"
+            f"Request: {request}"
         )
         response = self._client_or_create().models.generate_content(
             model=self.model,
             contents=prompt,
             config={
                 "response_mime_type": "application/json",
-                "response_json_schema": PROFILE_SCHEMA,
+                "response_json_schema": profile_schema(languages, year),
                 "temperature": 0.1,
             },
         )
@@ -101,7 +143,14 @@ class GeminiService:
             raw = json.loads(response.text)
         if not isinstance(raw, Mapping):
             raise ValueError("Gemini profile response was not a JSON object.")
-        return validate_profile(raw, supported_genres=supported_genres, supported_moods=supported_moods)
+        return validate_profile(
+            raw,
+            supported_genres=supported_genres,
+            supported_moods=supported_moods,
+            supported_languages=supported_languages,
+            catalog_has_years=catalog_has_years,
+            reference_year=year,
+        )
 
     def classify_languages(self, tracks: Sequence[Mapping[str, Any]]) -> dict[int, tuple[str, float]]:
         """Catalog-build-time only: estimate the sung language of each track.

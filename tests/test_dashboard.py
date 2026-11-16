@@ -158,7 +158,7 @@ class _FakeModels:
     """Returns a valid profile, then explanations for exactly the IDs it was sent."""
 
     def generate_content(self, *, model, contents, config):
-        if config.get("response_json_schema") == PROFILE_SCHEMA:
+        if "playlist_length" in config.get("response_json_schema", {}).get("properties", {}):  # profile request
             return _FakeResponse(
                 {
                     "activity": "studying",

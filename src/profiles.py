@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from datetime import date
 import math
 import re
 from typing import Any, Mapping
+
+from src.languages import normalize_language
 
 
 SUPPORTED_ACTIVITIES = {
@@ -20,6 +23,9 @@ SUPPORTED_ACTIVITIES = {
 SUPPORTED_STRUCTURES = {"warmup_peak_cooldown", "build", "consistent", "balanced"}
 MAX_PLAYLIST_LENGTH = 50  # Single source of truth; also used by the Gemini response schema.
 DEFAULT_PLAYLIST_LENGTH = 10
+PRIORITY_FEATURES = ("energy", "mood", "genre", "tempo", "language", "recency")
+RECENT_YEARS = 5  # "recent" means released within the last five years
+ENERGY_ARC_ACTIVITIES = {"workout", "running"}
 
 ACTIVITY_DEFAULTS = {
     "workout": (0.86, 138.0, "intense", "warmup_peak_cooldown", ["pop", "electronic", "rock"]),
@@ -43,10 +49,26 @@ class PreferenceProfile:
     target_energy: float
     target_tempo_bpm: float
     playlist_structure: str
+    # Optional constraints. "strict" means a hard filter; otherwise they only add score.
+    language: str | None = None
+    language_strict: bool = False
+    min_release_year: int | None = None
+    max_release_year: int | None = None
+    recency_strict: bool = False
+    # Optional per-feature priorities (0-1) suggested by Gemini; Python clamps and normalizes.
+    priorities: tuple[tuple[str, float], ...] = ()
+    # Informational notes about adjustments that are not problems (shown under Details).
+    notes: tuple[str, ...] = ()
+
+    @property
+    def has_year_range(self) -> bool:
+        return self.min_release_year is not None or self.max_release_year is not None
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
         result["preferred_genres"] = list(self.preferred_genres)
+        result["priorities"] = dict(self.priorities)
+        result["notes"] = list(self.notes)
         return result
 
 
@@ -60,14 +82,39 @@ def _number(value: Any, default: float, minimum: float, maximum: float) -> float
     return min(max(number, minimum), maximum)
 
 
+def _year(value: Any, reference_year: int) -> int | None:
+    try:
+        year = int(float(value))
+    except (TypeError, ValueError):
+        return None
+    if year <= 0:
+        return None  # 0 is the "no constraint" sentinel in the Gemini schema
+    return min(max(year, 1900), reference_year)
+
+
+def _flag(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().casefold() in {"true", "yes", "1"}
+    return bool(value)
+
+
 def validate_profile(
     raw: Mapping[str, Any],
     *,
     supported_genres: set[str],
     supported_moods: set[str],
+    supported_languages: set[str] | None = None,
+    catalog_has_years: bool = False,
+    reference_year: int | None = None,
 ) -> tuple[PreferenceProfile, list[str]]:
-    """Validate and normalize untrusted model output without raising on bad values."""
+    """Validate and normalize untrusted model output without raising on bad values.
+
+    ``supported_languages`` and ``catalog_has_years`` describe the active catalog, so a
+    constraint the catalog cannot answer is dropped with a visible warning, never silently.
+    """
     warnings: list[str] = []
+    notes: list[str] = []
+    reference_year = reference_year or date.today().year
     activity = str(raw.get("activity", "general")).strip().casefold()
     if activity not in SUPPORTED_ACTIVITIES:
         warnings.append(f"Unsupported activity '{activity}' replaced with 'general'.")
@@ -106,6 +153,61 @@ def validate_profile(
     if structure not in SUPPORTED_STRUCTURES:
         warnings.append(f"Unsupported structure '{structure}' replaced with '{default_structure}'.")
         structure = default_structure
+    if (
+        activity in ENERGY_ARC_ACTIVITIES
+        and structure == "consistent"
+        and not _flag(raw.get("steady_requested"))
+    ):
+        structure = default_structure
+        notes.append(
+            f"Used a {default_structure.replace('_', ' ')} energy arc for {activity}, "
+            "because steady energy was not explicitly requested."
+        )
+
+    # ----- language constraint -----
+    language = None
+    language_strict = False
+    raw_language = raw.get("language")
+    if raw_language not in (None, "", "none", "any"):
+        language = normalize_language(raw_language)
+        if language is None:
+            warnings.append(f"Language '{raw_language}' is not recognized, so it was ignored.")
+        elif supported_languages is not None and not supported_languages:
+            warnings.append(
+                f"This catalog has no language information, so the {language} request was ignored. "
+                "Switch to the real-music catalog to filter by language."
+            )
+            language = None
+        elif supported_languages is not None and language not in supported_languages:
+            warnings.append(f"This catalog has no {language} songs, so the language request was ignored.")
+            language = None
+        else:
+            language_strict = _flag(raw.get("language_strict"))
+
+    # ----- release-year constraint -----
+    min_year = _year(raw.get("min_release_year"), reference_year)
+    max_year = _year(raw.get("max_release_year"), reference_year)
+    if min_year and max_year and min_year > max_year:
+        min_year, max_year = max_year, min_year
+    recency_strict = False
+    if (min_year or max_year) and not catalog_has_years:
+        warnings.append(
+            "This catalog has no release dates, so the release-year request was ignored. "
+            "Switch to the real-music catalog to filter by year."
+        )
+        min_year = max_year = None
+    elif min_year or max_year:
+        recency_strict = _flag(raw.get("recency_strict"))
+
+    # ----- priorities: clamp to 0-1 here; the scorer bounds and normalizes them -----
+    priorities: list[tuple[str, float]] = []
+    raw_priorities = raw.get("priorities")
+    if isinstance(raw_priorities, Mapping):
+        for feature in PRIORITY_FEATURES:
+            if feature in raw_priorities:
+                value = _number(raw_priorities[feature], -1.0, 0.0, 1.0)
+                if value >= 0:
+                    priorities.append((feature, round(value, 3)))
 
     profile = PreferenceProfile(
         activity=activity,
@@ -115,8 +217,67 @@ def validate_profile(
         target_energy=_number(raw.get("target_energy"), default_energy, 0.0, 1.0),
         target_tempo_bpm=_number(raw.get("target_tempo_bpm"), default_tempo, 40.0, 220.0),
         playlist_structure=structure,
+        language=language,
+        language_strict=language_strict,
+        min_release_year=min_year,
+        max_release_year=max_year,
+        recency_strict=recency_strict,
+        priorities=tuple(priorities),
+        notes=tuple(notes),
     )
     return profile, warnings
+
+
+LANGUAGE_TERMS = {
+    "spanish": ("spanish", "español", "espanol", "en español", "latino", "latina"),
+    "english": ("english",),
+    "portuguese": ("portuguese", "português", "portugues", "brazilian"),
+    "korean": ("korean", "k-pop", "kpop"),
+    "hindi": ("hindi", "bollywood"),
+    "french": ("french", "français", "francais"),
+    "german": ("german", "deutsch"),
+    "italian": ("italian", "italiano"),
+    "japanese": ("japanese", "j-pop", "jpop"),
+}
+_STRICT = re.compile(r"\b(?:all|only|just|strictly|exclusively|nothing but|must be|100%)\b")
+_HEDGE_BEFORE = re.compile(r"\b(?:preferably|prefer|ideally|mostly|some|a few|kinda|kind of|sort of|maybe|a bit of)\b")
+_STRICT_AFTER = re.compile(r"^\W*(?:[\w']+\W+){0,2}(?:only|exclusively)\b")
+_HEDGE_AFTER = re.compile(r"^\W*\w*\W*(?:if possible|ideally|preferably|would be nice|or whatever)\b")
+RECENT_TERMS = ("recent", "new music", "new songs", "newer", "latest", "newest", "current", "this year", "modern",
+                "fresh", "new release")
+_NUMBER_BEFORE = re.compile(r"\b(\d{1,3})\b(?=.{0,25}\b(?:songs?|tracks?|tunes?)\b)")
+_NUMBER_AFTER = re.compile(r"\b(?:songs?|tracks?|music|playlist|tunes?|mix)\b.{0,30}?\b(\d{1,3})\b(?!\s*(?:s\b|bpm|%|min|minutes|'s))")
+_BARE_NUMBER = re.compile(r"(?<![\d.])\b(\d{1,3})\b(?!\s*(?:s\b|bpm|%|min|minutes|'s|th\b))")
+_DECADE = re.compile(r"\b(?:the\s+)?(?:(19|20)?(\d)0)'?s\b")
+
+
+def _parse_length(text: str) -> int:
+    for pattern in (_NUMBER_BEFORE, _NUMBER_AFTER):
+        match = pattern.search(text)
+        if match:
+            return int(match.group(1))
+    bare = [int(n) for n in _BARE_NUMBER.findall(text)]
+    return bare[0] if len(bare) == 1 else DEFAULT_PLAYLIST_LENGTH
+
+
+def _strictness(text: str, keyword_position: int) -> bool | None:
+    """True for hard wording, False for hedged wording, None when nothing signals either.
+
+    Looks at the words just before the keyword ("all in spanish", "kinda recent") and a hedge
+    right after it ("spanish if possible"), so a hedge that belongs to another phrase later in
+    the sentence does not leak in.
+    """
+    before = text[max(0, keyword_position - 25) : keyword_position]
+    after = text[keyword_position : keyword_position + 40]
+    strict_end = max((m.end() for m in _STRICT.finditer(before)), default=-1)
+    hedge_end = max((m.end() for m in _HEDGE_BEFORE.finditer(before)), default=-1)
+    if strict_end >= 0 or hedge_end >= 0:
+        return strict_end > hedge_end  # the signal closest to the keyword wins
+    if _STRICT_AFTER.search(after):
+        return True
+    if _HEDGE_AFTER.search(after):
+        return False
+    return None
 
 
 def infer_profile_offline(
@@ -124,12 +285,16 @@ def infer_profile_offline(
     *,
     supported_genres: set[str],
     supported_moods: set[str],
+    supported_languages: set[str] | None = None,
+    catalog_has_years: bool = False,
+    reference_year: int | None = None,
 ) -> tuple[PreferenceProfile, list[str]]:
     """Infer a safe profile locally when Gemini is unavailable or disabled."""
+    reference_year = reference_year or date.today().year
     text = request.casefold()
     activity = "general"
     activity_terms = {
-        "workout": ("gym", "workout", "lifting", "exercise"),
+        "workout": ("gym", "workout", "working out", "work out", "lifting", "exercise"),
         "running": ("run", "running", "jog", "marathon"),
         "studying": ("study", "studying", "homework", "focus", "coding", "reading"),
         "driving": ("drive", "driving", "road trip", "commute"),
@@ -142,8 +307,7 @@ def infer_profile_offline(
             break
 
     energy, tempo, mood, structure, genres = ACTIVITY_DEFAULTS[activity]
-    length_match = re.search(r"\b(\d{1,3})\b(?=.{0,25}\b(?:songs?|tracks?)\b)", text)
-    length = int(length_match.group(1)) if length_match else DEFAULT_PLAYLIST_LENGTH
+    length = _parse_length(text)
 
     explicit_genres = [genre for genre in sorted(supported_genres, key=len, reverse=True) if genre in text]
     explicit_moods = [candidate for candidate in sorted(supported_moods, key=len, reverse=True) if candidate in text]
@@ -155,10 +319,37 @@ def infer_profile_offline(
         energy = min(energy, 0.28)
     if any(term in text for term in ("high energy", "intense", "motivated", "fast")):
         energy = max(energy, 0.88)
+    steady = "consistent" in text or "steady" in text
     if "start slow" in text or "warm-up" in text or "warmup" in text or "cooldown" in text:
         structure = "warmup_peak_cooldown"
-    if "consistent" in text or "steady" in text:
+    if steady:
         structure = "consistent"
+
+    # Language: an explicit language counts as a hard filter unless the wording is hedged.
+    language, language_strict = None, False
+    for candidate, terms in LANGUAGE_TERMS.items():
+        positions = [text.find(term) for term in terms if term in text]
+        if positions:
+            language = candidate
+            strictness = _strictness(text, min(positions))
+            language_strict = True if strictness is None else strictness
+            break
+    if language == "spanish" and not explicit_genres:
+        genres = [g for g in ("latin", "reggaeton") if g in supported_genres] or genres
+
+    # Release years: "recent" is a soft preference unless worded strictly; a decade is a range.
+    min_year = max_year = None
+    recency_strict = False
+    decade = _DECADE.search(text)
+    recent_positions = [text.find(term) for term in RECENT_TERMS if term in text]
+    if decade:
+        century = decade.group(1) or ("20" if int(decade.group(2)) <= (reference_year % 100) // 10 else "19")
+        min_year = int(f"{century}{decade.group(2)}0")
+        max_year = min_year + 9
+        recency_strict = bool(_strictness(text, decade.start()))
+    elif recent_positions:
+        min_year = reference_year - RECENT_YEARS
+        recency_strict = bool(_strictness(text, min(recent_positions)))
 
     profile, warnings = validate_profile(
         {
@@ -169,8 +360,17 @@ def infer_profile_offline(
             "target_energy": energy,
             "target_tempo_bpm": tempo,
             "playlist_structure": structure,
+            "steady_requested": steady,
+            "language": language,
+            "language_strict": language_strict,
+            "min_release_year": min_year,
+            "max_release_year": max_year,
+            "recency_strict": recency_strict,
         },
         supported_genres=supported_genres,
         supported_moods=supported_moods,
+        supported_languages=supported_languages,
+        catalog_has_years=catalog_has_years,
+        reference_year=reference_year,
     )
     return profile, ["Gemini was not used; local keyword-based interpretation is active.", *warnings]
