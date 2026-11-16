@@ -53,6 +53,19 @@ def placeholder_tile_html(song: Mapping[str, Any]) -> str:
     )
 
 
+LENGTH_NOTE_MARKERS = ("maximum playlist length", "catalog contains only", "fit this catalog", "no songs were returned")
+
+
+def length_notes(result: PlaylistResult) -> list[str]:
+    """Warnings that change how many songs the listener gets. These must stay visible."""
+    return [w for w in result.warnings if any(marker in w for marker in LENGTH_NOTE_MARKERS)]
+
+
+def result_weights(result: PlaylistResult) -> dict[str, float]:
+    """The normalized weights this playlist was scored with (older results: the defaults)."""
+    return dict(result.weights) if result.weights else dict(WEIGHTS)
+
+
 def title_html(song: Mapping[str, Any]) -> str:
     return (
         f'<div class="vm-title">{escape(str(song.get("title", "")))}</div>'
@@ -138,14 +151,15 @@ def playlist_dataframe(result: PlaylistResult) -> pd.DataFrame:
 
 def contributions_dataframe(result: PlaylistResult) -> pd.DataFrame:
     """Feature contributions in score points (0-100 scale) for every selected song."""
+    weights = result_weights(result)
     rows = []
     for rank, item in enumerate(result.songs, start=1):
         row: dict[str, Any] = {"rank": rank, "title": str(item.song["title"])}
-        for feature in WEIGHTS:
+        for feature in weights:
             row[feature] = round(float(item.contributions.get(feature, 0.0)) * 100.0, 2)
         row["score"] = float(item.score)
         rows.append(row)
-    return pd.DataFrame(rows, columns=["rank", "title", *WEIGHTS, "score"])
+    return pd.DataFrame(rows, columns=["rank", "title", *weights, "score"])
 
 
 def song_contributions(result: PlaylistResult, rank: int) -> pd.DataFrame:
@@ -158,7 +172,7 @@ def song_contributions(result: PlaylistResult, rank: int) -> pd.DataFrame:
                 "earned_points": round(float(item.contributions.get(feature, 0.0)) * 100.0, 2),
                 "max_points": round(weight * 100.0, 2),
             }
-            for feature, weight in WEIGHTS.items()
+            for feature, weight in result_weights(result).items()
         ]
     )
 
@@ -246,9 +260,9 @@ def system_checks(
         ),
     ]
 
-    length_notes = [w for w in result.warnings if "maximum playlist length" in w or "catalog contains only" in w]
-    if length_notes:
-        checks.append(Check("Playlist length limits", None, " ".join(length_notes)))
+    notes = length_notes(result)
+    if notes:
+        checks.append(Check("Playlist length limits", None, " ".join(notes)))
 
     if result.used_gemini_interpretation:
         interpretation ="Gemini interpreted the request; Python validated the profile."
@@ -303,7 +317,7 @@ def playlist_csv(result: PlaylistResult) -> str:
         row.update({field: item.song[field] for field in SONG_FIELDS})
         row["compatibility_score"] = float(item.score)
         row["position_target_energy"] = float(item.position_target_energy)
-        for feature in WEIGHTS:
+        for feature in result_weights(result):
             row[f"{feature}_points"] = round(float(item.contributions.get(feature, 0.0)) * 100.0, 2)
         row["deterministic_reason"] = item.deterministic_reason
         row["explanation"] = item.explanation

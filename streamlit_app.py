@@ -35,13 +35,14 @@ from src.dashboard_data import (
     is_real_catalog,
     placeholder_tile_html,
     playlist_csv,
+    length_notes,
     playlist_dataframe,
+    result_weights,
     song_contributions,
     system_checks,
 )
 from src.gemini_service import GeminiService
 from src.media import cover_url, fetch_preview_url, origin_note, spotify_embed_url, spotify_url
-from src.playlist import WEIGHTS
 from src.recommender import load_songs
 
 
@@ -327,15 +328,15 @@ if result is not None:
             border=True,
             help="Gemini-written sentences (IDs validated) or deterministic score reasons.",
         )
-        length_notes = [w for w in result.warnings if "maximum playlist length" in w or "catalog contains only" in w]
+        shortage_notes = length_notes(result)
         st.metric(
             "Songs returned",
             f"{len(result.songs)} of {result.profile.playlist_length}",
             border=True,
-            help=" ".join(length_notes) if length_notes else "Every requested song was returned.",
+            help=" ".join(shortage_notes) if shortage_notes else "Every requested song was returned.",
         )
-    if length_notes:
-        st.warning(" ".join(length_notes), icon=":material/playlist_remove:", title="Playlist length adjusted")
+    if shortage_notes:
+        st.warning(" ".join(shortage_notes), icon=":material/playlist_remove:", title="Playlist length adjusted")
 
     if result.used_gemini_interpretation and result.used_gemini_explanations:
         st.success(
@@ -372,8 +373,21 @@ if result is not None:
             st.metric("Target energy", f"{profile.target_energy:.2f}", border=True)
             st.metric("Target tempo", f"{profile.target_tempo_bpm:.0f} BPM", border=True)
             st.metric("Structure", profile.playlist_structure.replace("_", " "), border=True)
+            if profile.language:
+                st.metric(
+                    "Language",
+                    f"{profile.language.title()} ({'only' if profile.language_strict else 'preferred'})",
+                    border=True,
+                    help="'only' filters the catalog; 'preferred' adds score. Song languages are estimates.",
+                )
+            if profile.has_year_range:
+                low, high = profile.min_release_year, profile.max_release_year
+                years = f"{low}–{high}" if low and high else f"{low} or later" if low else f"{high} or earlier"
+                st.metric("Release years", f"{years} ({'only' if profile.recency_strict else 'preferred'})", border=True)
         genres = " ".join(f":blue-badge[{genre}]" for genre in profile.preferred_genres)
         st.markdown(f"**Preferred genres:** {genres or 'none matched; genre is scored neutrally'}")
+        for note in profile.notes:
+            st.caption(f":material/tune: {note}")
 
 
 # ---------------------------------------------------------------------------
@@ -391,10 +405,11 @@ tab_playlist, tab_energy, tab_scores, tab_checks, tab_catalog = st.tabs(
 )
 
 EMPTY_HINT = "Generate a playlist to see results here."
+NO_SONGS_HINT = "No songs matched this request. See the note above for why, then try a broader request."
 
 with tab_playlist:
-    if result is None:
-        st.info(EMPTY_HINT, icon=":material/info:")
+    if result is None or not result.songs:
+        st.info(EMPTY_HINT if result is None else NO_SONGS_HINT, icon=":material/info:")
     else:
         playlist_df = playlist_dataframe(result)
         st.html(f'<div class="vm-eyebrow">{len(result.songs)} tracks · ordered for {escape(result.profile.activity)}</div>')
@@ -458,8 +473,8 @@ with tab_playlist:
             )
 
 with tab_energy:
-    if result is None:
-        st.info(EMPTY_HINT, icon=":material/info:")
+    if result is None or not result.songs:
+        st.info(EMPTY_HINT if result is None else NO_SONGS_HINT, icon=":material/info:")
     else:
         st.caption(STRUCTURE_NOTES.get(result.profile.playlist_structure, ""))
         chart_df = energy_chart_data(result)
@@ -548,12 +563,15 @@ with tab_energy:
         st.altair_chart(chart, theme=None, alt=describe_energy_shape(result))
 
 with tab_scores:
-    if result is None:
-        st.info(EMPTY_HINT, icon=":material/info:")
+    if result is None or not result.songs:
+        st.info(EMPTY_HINT if result is None else NO_SONGS_HINT, icon=":material/info:")
     else:
-        weights_text = " + ".join(f"{weight:.2f} × {name}" for name, weight in WEIGHTS.items())
+        weights = result_weights(result)
+        weights_text = " + ".join(f"{weight:.2f} × {name}" for name, weight in weights.items())
         st.caption(
             f"Compatibility (0–100) = 100 × ({weights_text}). Each feature fit is between 0 and 1. "
+            "Genre and mood give partial credit to close matches (for example latin and reggaeton). "
+            "Weights come from defaults, adjusted only within safe limits when Gemini suggests priorities. "
             "Energy is compared with each position's target, so ordering never inflates the score."
         )
         contrib_df = contributions_dataframe(result)
@@ -561,7 +579,7 @@ with tab_scores:
             feature: st.column_config.ProgressColumn(
                 f"{feature.title()} pts", min_value=0.0, max_value=weight * 100, format="%.1f"
             )
-            for feature, weight in WEIGHTS.items()
+            for feature, weight in weights.items()
         }
         st.dataframe(
             contrib_df,
