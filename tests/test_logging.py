@@ -10,7 +10,7 @@ from src.gemini_service import GeminiService
 from src.logging_setup import short
 from src.recommender import load_songs
 
-SECRET = "AIza-FAKE-KEY-FOR-TESTS-ONLY"
+SECRET = "AIza-FAKE-KEY-FOR-TESTS-ONLY"  # deliberately not Google's real 39-character key format
 
 
 @pytest.fixture
