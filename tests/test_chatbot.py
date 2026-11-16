@@ -217,6 +217,15 @@ def test_ask_tab_answers_about_the_playlist_offline(app):
     assert any("Catalog lookup" in str(b.value) for b in app.markdown)
 
 
+def test_chat_lives_in_the_corner_launcher_not_a_tab(app):
+    assert app.get_by_key("vm-chat-launcher") is not None
+    assert app.chat_input(key="chat_input") is not None
+    tab_labels = [tab.label for tab in app.tabs]
+    assert not any("Ask" in label for label in tab_labels)
+    css = (ROOT / "assets" / "vibematch.css").read_text(encoding="utf-8")
+    assert ".st-key-vm-chat-launcher" in css and "position: fixed" in css and "left: 1.25rem" in css
+
+
 def test_ask_tab_refuses_trivia_and_suggestions_work(app):
     app.pills(key="chat_suggestion").set_value(":material/speed: Which songs are over 130 BPM?").run()
     assert not app.exception

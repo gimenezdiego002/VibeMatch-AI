@@ -32,7 +32,7 @@ flowchart TD
     SW --> OUT
 
     %% ---------- Catalog chatbot (RAG) ----------
-    Q[User question in Ask tab or --ask] --> QP[Gemini or offline parser: structured query]
+    Q[User question in the chat button or --ask] --> QP[Gemini or offline parser: structured query]
     QP --> QV{Python query validation: known fields, filters, limits}
     QV --> RET[Python retrieval from catalog and current playlist]
     OUT --> RET

@@ -52,7 +52,7 @@ flowchart TD
     EV --> OUT[Ordered playlist, scores, warnings, AI or fallback labels]
     DR --> OUT
     SW --> OUT
-    Q[Question in Ask tab or --ask] --> QP[Gemini or offline parser: structured query]
+    Q[Question in the chat button or --ask] --> QP[Gemini or offline parser: structured query]
     QP --> QV{Python query validation}
     QV --> RET[Python retrieval from catalog and playlist]
     OUT --> RET
@@ -325,7 +325,7 @@ Every answer is labeled **AI answer** or **Catalog lookup** and lists its source
 | Profile | Activity, length, mood, energy, tempo, structure, and, when present, **Language** (only or preferred) and **Release years**, plus notes about adjustments. |
 | Playlist | A responsive card grid with album covers (generated tiles for fictional songs), score pills, an energy meter with the position's target, explanations, sourced album and year notes, **Play** and **Open in Spotify**. A table view and CSV download are below it. |
 | Now playing (sidebar) | Cover, sourced note, Spotify player, and a 30-second preview fetched fresh. |
-| Ask | The catalog chatbot with suggestion chips, labels and sources. |
+| Chat button (bottom left) | An "Ask about the songs" button pinned to the bottom-left corner opens the catalog chatbot: scrolling history, suggestion chips, AI-answer or catalog-lookup labels, and sources. |
 | Energy flow | Actual energy against target energy, with warm-up, peak and cooldown bands. |
 | Score details | Per-feature points using the weights this playlist actually used, and a per-song inspector. |
 | System checks | Re-verifies IDs, metadata, uniqueness, length and determinism; lists AI or fallback use and all warnings. |
@@ -367,7 +367,7 @@ python scripts/build_real_catalog.py --label-languages-only # only re-estimate t
 ## Testing summary
 
 ```powershell
-python -m pytest -q        # 179 passed (November 16, 2026); every network call is mocked
+python -m pytest -q        # 180 passed (November 16, 2026); every network call is mocked
 python evaluation.py       # constraint, determinism and chatbot evaluation
 ```
 
@@ -380,7 +380,7 @@ tests/test_playlist_length.py   8 passed   50-song cap, visible trims, empty cat
 tests/test_constraints.py      20 passed   language/year validation, offline parsing, Gemini schema
 tests/test_scoring.py          20 passed   similarity tables, bounded weights, hard filters, dashboard display
 tests/test_languages.py        16 passed   language vocabulary, rule estimates, overrides, build-time labeler
-tests/test_chatbot.py          28 passed   query validation, retrieval, citation checks, refusals, Ask tab
+tests/test_chatbot.py          29 passed   query validation, retrieval, citation checks, refusals, chat launcher
 tests/test_catalog_builder.py  27 passed   discovery, filters, mood rules, enrichment
 tests/test_media.py             6 passed   links, sourced notes, preview fallbacks
 tests/test_design.py            7 passed   HTML escaping, accessibility, chart bands, CSS rules

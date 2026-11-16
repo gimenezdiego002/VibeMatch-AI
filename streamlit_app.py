@@ -399,10 +399,9 @@ if result is not None:
 # Detail tabs
 # ---------------------------------------------------------------------------
 
-tab_playlist, tab_ask, tab_energy, tab_scores, tab_checks, tab_catalog = st.tabs(
+tab_playlist, tab_energy, tab_scores, tab_checks, tab_catalog = st.tabs(
     [
         ":material/queue_music: Playlist",
-        ":material/forum: Ask",
         ":material/show_chart: Energy flow",
         ":material/analytics: Score details",
         ":material/shield: System checks",
@@ -660,67 +659,76 @@ def render_answer(message: dict) -> None:
         st.caption(f":material/info: {warning}")
 
 
-with tab_ask:
-    chat_catalog_key = run["catalog_key"] if run else st.session_state.catalog_choice
-    chat_catalog = load_catalog(str(CATALOGS[chat_catalog_key]["path"]))
-    st.caption(
-        f"Ask about your playlist or the {CATALOGS[chat_catalog_key]['label'].lower()} catalog. Answers come only "
-        "from catalog fields (title, artist, album, year, genre, mood, language, tempo, energy). "
-        "Python finds the songs first; Gemini, when on, may only phrase what was found, and its answer is checked."
-    )
-    for message in st.session_state.chat:
-        with st.chat_message(message["role"]):
-            if message["role"] == "user":
-                st.markdown(message["content"])
-            else:
-                render_answer(message)
-
-    question = st.chat_input("Ask about these songs", max_chars=MAX_QUESTION_CHARS, key="chat_input")
-    if not st.session_state.chat:
-        suggestion_slot = st.empty()
-        picked = suggestion_slot.pills(
-            "Try asking", list(CHAT_SUGGESTIONS), key="chat_suggestion", label_visibility="collapsed"
+# Chat launcher: a button pinned to the bottom-left corner (see .st-key-vm-chat-launcher in the
+# CSS) that opens the song assistant in a popover. Without the CSS it still works, inline.
+with st.container(key="vm-chat-launcher"):
+    with st.popover("Ask about the songs", icon=":material/chat:", type="primary", key="chat_popover"):
+        chat_catalog_key = run["catalog_key"] if run else st.session_state.catalog_choice
+        chat_catalog = load_catalog(str(CATALOGS[chat_catalog_key]["path"]))
+        st.html('<div class="vm-eyebrow">Song assistant</div>')
+        st.caption(
+            f"Ask about your playlist or the {CATALOGS[chat_catalog_key]['label'].lower()} catalog. Answers come "
+            "only from catalog data; Gemini, when on, may only phrase what Python found, and each answer is checked."
         )
-        if picked and not question:
-            question = CHAT_SUGGESTIONS[picked]
-        if question:
-            suggestion_slot.empty()
+        history = st.container(height=340, key="vm-chat-history")
+        with history:
+            if not st.session_state.chat:
+                st.caption("Try a suggestion below, or type a question like “What album is #2 from?”")
+            for message in st.session_state.chat:
+                with st.chat_message(message["role"]):
+                    if message["role"] == "user":
+                        st.markdown(message["content"])
+                    else:
+                        render_answer(message)
 
-    if question:
-        now = datetime.now().timestamp()
-        recent = [t for t in st.session_state.chat_times if now - t < CHAT_WINDOW_SECONDS]
-        with st.chat_message("user"):
-            st.markdown(question)
-        if len(recent) >= CHAT_LIMIT:
-            reply = {"role": "assistant", "source": "Catalog lookup",
-                     "content": "You're asking quickly. Please wait a moment and try again.", "warnings": []}
-        else:
-            st.session_state.chat_times = [*recent, now]
-            ask_with_gemini = bool(st.session_state.use_gemini) and gemini_ready
-            with st.spinner("Looking it up…"):
-                answer = answer_question(
-                    question,
-                    catalog=chat_catalog,
-                    playlist_songs=[item.song for item in result.songs] if result else [],
-                    gemini=GeminiService(api_key=api_key, model=gemini_model) if ask_with_gemini else None,
-                    use_gemini=ask_with_gemini,
-                )
-            reply = {
-                "role": "assistant",
-                "source": answer.source,
-                "content": answer.text,
-                "sources": [
-                    f"{'#' + str(r['rank']) + ' ' if r['rank'] else ''}{r['title']} (ID {r['id']})"
-                    for r in answer.records if r["id"] in set(answer.cited_ids)
-                ][:10],
-                "warnings": list(answer.warnings),
-            }
-        with st.chat_message("assistant"):
-            render_answer(reply)
-        st.session_state.chat = [*st.session_state.chat, {"role": "user", "content": question}, reply]
-    if st.session_state.chat and st.button("Clear conversation", icon=":material/delete_sweep:", key="chat_clear"):
-        st.session_state.chat = []
-        st.rerun()
+        question = st.chat_input("Ask about these songs", max_chars=MAX_QUESTION_CHARS, key="chat_input")
+        if not st.session_state.chat:
+            suggestion_slot = st.empty()
+            picked = suggestion_slot.pills(
+                "Try asking", list(CHAT_SUGGESTIONS), key="chat_suggestion", label_visibility="collapsed"
+            )
+            if picked and not question:
+                question = CHAT_SUGGESTIONS[picked]
+            if question:
+                suggestion_slot.empty()
+
+        if question:
+            now = datetime.now().timestamp()
+            recent = [t for t in st.session_state.chat_times if now - t < CHAT_WINDOW_SECONDS]
+            with history:
+                with st.chat_message("user"):
+                    st.markdown(question)
+            if len(recent) >= CHAT_LIMIT:
+                reply = {"role": "assistant", "source": "Catalog lookup",
+                         "content": "You're asking quickly. Please wait a moment and try again.", "warnings": []}
+            else:
+                st.session_state.chat_times = [*recent, now]
+                ask_with_gemini = bool(st.session_state.use_gemini) and gemini_ready
+                with history, st.spinner("Looking it up…"):
+                    answer = answer_question(
+                        question,
+                        catalog=chat_catalog,
+                        playlist_songs=[item.song for item in result.songs] if result else [],
+                        gemini=GeminiService(api_key=api_key, model=gemini_model) if ask_with_gemini else None,
+                        use_gemini=ask_with_gemini,
+                    )
+                reply = {
+                    "role": "assistant",
+                    "source": answer.source,
+                    "content": answer.text,
+                    "sources": [
+                        f"{'#' + str(r['rank']) + ' ' if r['rank'] else ''}{r['title']} (ID {r['id']})"
+                        for r in answer.records if r["id"] in set(answer.cited_ids)
+                    ][:10],
+                    "warnings": list(answer.warnings),
+                }
+            with history:
+                with st.chat_message("assistant"):
+                    render_answer(reply)
+            st.session_state.chat = [*st.session_state.chat, {"role": "user", "content": question}, reply]
+        if st.session_state.chat and st.button("Clear conversation", icon=":material/delete_sweep:", key="chat_clear"):
+            st.session_state.chat = []
+            st.rerun()
 
 with tab_catalog:
     catalog_key = st.session_state.catalog_choice

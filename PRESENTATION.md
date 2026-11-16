@@ -27,7 +27,7 @@ Show the Mermaid diagram in the README (GitHub renders it) or `diagrams/architec
    - **Point out:** the interpretation and explanation labels say whether Gemini or the fallback did each step.
 2. Press **Play** on a card. The sidebar shows the cover, the sourced album note, the Spotify player and a 30-second preview.
 3. Open **Energy flow** to show the warm-up, peak and cooldown bands, and the target line.
-4. Open **Ask** and ask:
+4. Click **Ask about the songs** (the chat button in the bottom-left corner) and ask:
    - `What album is #1 from?`: answered with a source.
    - `Is there anything quieter than #2?`: names the reference song and lists every match.
    - `What are the lyrics of #3?`: an honest refusal, because the catalog doesn't contain lyrics.
@@ -42,7 +42,7 @@ Show the Mermaid diagram in the README (GitHub renders it) or `diagrams/architec
 ## 4:30–5:30 — Reliability evidence
 
 ```powershell
-python -m pytest -q          # 179 passed, every network call mocked
+python -m pytest -q          # 180 passed, every network call mocked
 python evaluation.py         # constraint satisfaction, determinism, chatbot accuracy and refusals
 ```
 

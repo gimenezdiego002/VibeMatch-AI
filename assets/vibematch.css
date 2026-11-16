@@ -245,6 +245,32 @@
 }
 .st-key-vm-nowplaying .vm-title { font-size: 1.25rem; -webkit-line-clamp: 3; }
 
+/* ---------- Chat launcher: a button pinned to the bottom-left corner ---------- */
+.st-key-vm-chat-launcher {
+  position: fixed;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 999995; /* above the sidebar (999991), which otherwise paints over the corner */
+  width: auto !important;
+}
+.st-key-vm-chat-launcher button {
+  border-radius: 999px;
+  padding: 0.65rem 1.1rem;
+  font-weight: 650;
+  background: var(--vm-accent) !important;
+  color: var(--vm-ink) !important;
+  border: 0 !important;
+  box-shadow: 0 14px 34px -12px rgba(255, 122, 182, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.st-key-vm-chat-launcher button * { color: var(--vm-ink) !important; }
+/* Keep the last sidebar items scrollable above the launcher. FRAGILE: sidebar test id. */
+[data-testid="stSidebarContent"] { padding-bottom: 5rem; }
+/* Chat history: subtle surface inside the popover. */
+.st-key-vm-chat-history {
+  border-radius: var(--vm-radius-md);
+  background: rgba(255, 255, 255, 0.025);
+}
+
 /* ---------- Accessibility preferences ---------- */
 @media (prefers-reduced-motion: reduce) {
   [class*="st-key-vmcard"], .stApp button, .stApp a[data-testid^="stBaseLinkButton"] { transition: none; }

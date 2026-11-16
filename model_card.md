@@ -105,13 +105,13 @@ When the key is missing, the SDK is absent, the network fails, the daily free-ti
 
 ## Reliability evaluation
 
-On November 16, 2026, `python -m pytest -q` produced **179 passed**, with all network access mocked. One original assertion was deliberately updated when the playlist cap rose from 20 to 50, and one test double was updated to recognize the extended schema. The tests cover:
+On November 16, 2026, `python -m pytest -q` produced **180 passed**, with all network access mocked. One original assertion was deliberately updated when the playlist cap rose from 20 to 50, and one test double was updated to recognize the extended schema. The tests cover:
 
 - **Validation:** CSV validation; profile and constraint validation and clamping; offline parsing of language, hedges, numbers, and decades; the Gemini schema built from the catalog.
 - **Scoring:** similarity tables, bounded and normalized weights, contributions that sum to the score, hard filters with shortage warnings, the zero-song case, and determinism.
 - **Chatbot:** query validation, retrieval, comparisons, refusals, and rejection of invented IDs, wrong numbers, incomplete answers, and off-topic answers.
 - **Language labeling:** labeling, fallback, and overrides.
-- **Logging and the dashboard:** logging and key redaction, and AppTest checks of the dashboard and the Ask tab.
+- **Logging and the dashboard:** logging and key redaction, and AppTest checks of the dashboard and the chat launcher.
 
 `python evaluation.py` (results in `evaluation_results.txt`):
 
