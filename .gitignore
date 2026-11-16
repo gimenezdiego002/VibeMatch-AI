@@ -17,3 +17,6 @@ venv/
 
 # Streamlit secrets (copy .streamlit/secrets.toml.example instead)
 .streamlit/secrets.toml
+
+# Optional local log file (VIBEMATCH_LOG_FILE)
+logs/
