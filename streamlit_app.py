@@ -43,6 +43,7 @@ from src.dashboard_data import (
     system_checks,
 )
 from src.gemini_service import GeminiService
+from src.logging_setup import configure_logging
 from src.media import cover_url, fetch_preview_url, origin_note, spotify_embed_url, spotify_url
 from src.recommender import load_songs
 
@@ -110,6 +111,7 @@ def read_secret(name: str) -> str | None:
     return str(value).strip() if value else None
 
 
+configure_logging()  # pipeline events to the server console (and VIBEMATCH_LOG_FILE if set); never keys
 local_env.load_local_env()  # Optional git-ignored .env; real environment variables take precedence.
 api_key = read_secret("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY", "").strip() or None
 gemini_model = read_secret("GEMINI_MODEL") or os.getenv("GEMINI_MODEL", "").strip() or None

@@ -16,10 +16,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from difflib import SequenceMatcher
+import logging
 import re
 from typing import Any, Mapping, Sequence
 
 from src.languages import normalize_language
+from src.logging_setup import short
+
+LOGGER = logging.getLogger(__name__)
 
 
 FIELDS = ("title", "artist", "album", "release_year", "genre", "mood", "language", "tempo_bpm", "energy")
@@ -480,9 +484,13 @@ def answer_question(
         if named:
             query = replace(query, target_text=named)
 
+    LOGGER.info("Chat question (%s parser): intent=%s scope=%s | %s",
+                "Gemini" if gemini_on else "local", query.intent, query.scope, short(question))
     if query.intent == "unsupported":
+        LOGGER.info("Chat refused: question needs data the catalog does not have.")
         return ChatAnswer(text=REFUSAL, source="Catalog lookup", warnings=tuple(warnings))
     records, total, notes = retrieve(query, index)
+    LOGGER.info("Chat retrieval: %d match(es), %d returned", total, len(records))
     if notes:
         return ChatAnswer(text=" ".join(notes), source="Catalog lookup", warnings=tuple(warnings))
     if not records and query.intent != "count" and not query.relative:
@@ -503,10 +511,13 @@ def answer_question(
             cited_ids = tuple(int(i) for i in reply.get("cited_ids", []) if isinstance(i, int))
             problem = verify_ai_answer(text, cited_ids, records, total, reference, query.fields, query.intent)
             if problem is None:
+                LOGGER.info("Chat AI answer accepted (cited %d song(s)).", len(cited_ids))
                 return ChatAnswer(text=text, source="AI answer", records=tuple(records), cited_ids=cited_ids,
                                   total_matches=total, warnings=tuple(warnings))
+            LOGGER.warning("Chat AI answer rejected: %s", problem)
             warnings.append(f"The AI answer was discarded because {problem}; showing a catalog lookup instead.")
         except Exception as exc:  # external boundary
+            LOGGER.warning("Chat AI answer failed (%s); using catalog lookup.", type(exc).__name__)
             warnings.append(f"Gemini could not write an answer ({type(exc).__name__}); showing a catalog lookup.")
     return ChatAnswer(text=fallback, source="Catalog lookup", records=tuple(records), cited_ids=cited,
                       total_matches=total, warnings=tuple(warnings))

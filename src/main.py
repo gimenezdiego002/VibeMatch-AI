@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 
 from src.app import create_playlist
 from src.env import load_local_env
+from src.logging_setup import configure_logging
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -14,11 +16,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--request", "-r", help="Natural-language playlist request")
     parser.add_argument("--offline", action="store_true", help="Skip Gemini and use the deterministic local interpreter")
     parser.add_argument("--catalog", default="data/songs.csv", help="Path to a compatible song catalog CSV")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Log each pipeline step to stderr")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
+    configure_logging(logging.INFO if args.verbose else logging.WARNING)
     load_local_env()
     request = args.request or input("Describe the playlist you want: ").strip()
     try:
