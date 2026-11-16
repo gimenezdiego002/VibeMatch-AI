@@ -1,349 +1,450 @@
 # VibeMatch AI: Context-Aware Playlist Generator
 
-VibeMatch AI is a CodePath AI110 Applied AI System. A user describes a situation in natural language, such as studying, running, or working out. Gemini converts that request into a validated preference profile; deterministic Python code then scores and orders songs from a local catalog. Gemini may explain the final selections, but it cannot add songs, alter metadata, calculate scores, or change rankings.
+VibeMatch AI turns a sentence like *"I am working out, I want 15 songs all in Spanish, kinda recent"* into an ordered, explained playlist from a verified song catalog, and then answers questions about those songs. Gemini reads the request and phrases explanations and answers. Python validates everything Gemini returns and does all of the selecting, scoring and ordering. Gemini can never invent a song, an ID, a score or a fact.
 
-The application remains fully usable without an API key. If Gemini is disabled, unavailable, or returns invalid output, a local keyword interpreter and deterministic explanations take over and the CLI or dashboard shows a warning.
+**Why it matters:** language models are good at understanding what people mean, but unreliable as a source of facts. This project shows one way to combine the two safely. The model interprets; deterministic code decides and checks, and every AI step has a tested fallback. The app is fully usable without an API key.
 
-VibeMatch can be used from the command line (`python -m src.main`) or from a Streamlit dashboard (`streamlit run streamlit_app.py`). Both call the same `create_playlist()` pipeline.
+- **Code:** https://github.com/gimenezdiego002/VibeMatch-AI
+- **Run it:** `streamlit run streamlit_app.py` (dashboard) or `python -m src.main` (CLI)
+- **Responsible-AI write-up:** [`model_card.md`](model_card.md)
+- **Walkthrough video (optional):** _Student placeholder: add your Loom link here if you record one._
 
-## From Project 3 to Project 4
+## Base project (Module 3)
 
-The original Music Recommender Simulation loaded fictional records from CSV, accepted a manually constructed profile, and ranked songs with genre, mood, energy, and acousticness bonuses. That baseline remains in `src/recommender.py` for comparison and backward-compatible tests.
+This project extends my **Music Recommender Simulation** from CodePath AI110 Module 3. That project loaded 17 fictional songs from a CSV file, took a hand-built user profile (favorite genre, favorite mood, target energy, likes acoustic), and ranked songs with fixed bonuses for genre, mood, energy and acousticness. It had no natural-language input, no AI model, and no notion of a playlist's order. Its scorer is preserved unchanged in `src/recommender.py`, with its original tests.
 
-Project 4 adds:
+## What the system does now
 
-- natural-language request interpretation;
-- strict validation of external model output;
-- normalized energy, mood, genre, and tempo scoring;
-- workout, running, study, driving, relaxing, party, and general defaults;
-- activity-specific energy sequencing and artist diversity;
-- optional Gemini explanations constrained to selected records;
-- safe offline and API-failure fallbacks;
-- a 50-record synthetic catalog and expanded reliability tests.
-
-## Architecture
-
-```text
-Request -> Gemini interpreter -----> profile validator -> Python scorer
-              | API/JSON failure           ^                 |
-              v                            |                 v
-         local fallback -------------------+          playlist sequencer
-                                                               |
-                               Gemini explainer <---------------+
-                                  | invalid IDs/API failure     |
-                                  v                             v
-                         deterministic reasons ----> CLI / dashboard
-```
-
-The detailed Mermaid source is in [`diagrams/architecture.mmd`](diagrams/architecture.mmd).
-
-### Responsibility boundary
-
-| Component | Allowed responsibility |
+| Capability | How it works |
 | --- | --- |
-| Gemini interpreter | Infer a structured preference profile from user language |
-| Profile validator | Clamp numbers and reject/replace unsupported categories |
-| Python scoring engine | Calculate every compatibility score and contribution |
-| Playlist generator | Select only catalog IDs, order energy, limit artist repeats |
-| Gemini explainer | Describe already-selected verified metadata concisely |
-| CLI | Display profile, ordered results, warnings, and AI/fallback status |
-| Streamlit dashboard | Collect the request, call `create_playlist()`, display results, re-verify guardrails, export CSV. It does not score or select songs |
+| **Natural-language requests** | Gemini returns a schema-constrained profile (activity, length, mood, energy, tempo, energy arc, language, release years, priorities). A local keyword interpreter does the same job offline. |
+| **Constraint handling** | "All in Spanish" is a hard filter; "preferably Spanish" or "kinda recent" adds score. If the catalog runs short, the app returns what fits and says so with counts. |
+| **Deterministic selection** | Python scores every song (energy, graded mood and genre similarity, tempo, optional language and recency), then sequences an energy arc with artist diversity. The same validated profile always gives the same playlist. |
+| **Catalog chatbot (RAG)** | Ask "What album is #4 from?" or "Is there anything quieter than #3?". Python retrieves matching songs first; Gemini may only phrase an answer from those records, and Python rejects any answer that cites an unretrieved song, quotes a wrong number, leaves out a match, or skips the value asked for. |
+| **Reliability system** | Validation at every AI boundary, a System checks panel that re-verifies each playlist, structured logging with key redaction, 179 automated tests, and `evaluation.py`, which measures constraint satisfaction, determinism and chatbot accuracy. |
+| **Two catalogs** | 50 fictional songs (default, offline-safe) or 95 real tracks with album covers, Spotify links and players, and 30-second previews. |
 
-## Scoring and ordering
+The assignment's AI-feature requirement is met by **retrieval-augmented generation** (the chatbot answers only from retrieved catalog records) and a **reliability and testing system** (the verification checks, system checks and evaluation script). Both change what the app does at runtime: retrieval decides what Gemini is allowed to say, and failed checks replace AI output with deterministic results.
 
-The Project 4 score is normalized from 0 to 100:
+## Architecture overview
 
-```text
-0.35 × energy similarity
-+ 0.25 × mood match
-+ 0.25 × genre match
-+ 0.15 × tempo similarity
+```mermaid
+flowchart TD
+    U[User: natural-language playlist request] --> UI[Streamlit dashboard or CLI]
+    UI --> ORCH[create_playlist orchestrator]
+    ORCH --> GI[Gemini interpreter: structured JSON profile + constraints]
+    GI -. API error, quota limit, or invalid JSON .-> FB[Local keyword interpreter]
+    GI --> PV{Python validation against the active catalog}
+    FB --> PV
+    PV --> PF[Validated profile]
+    CSV[(Fictional songs.csv)] --> CV{CSV guardrails}
+    RCSV[(Real songs: real_songs.csv)] --> CV
+    BLD[build_real_catalog.py] -. built once, reviewed by a person .-> RCSV
+    LANG[Language estimates: Gemini at build time, rules, manual overrides] -. labels .-> RCSV
+    PF --> HF{Hard filters: language or years marked 'only'}
+    CV --> HF
+    HF --> SE[Python scoring]
+    SE --> PG[Sequencer: energy arc, artist diversity, ID tie-breaks]
+    HF -. too few songs .-> SW[Visible shortage warning]
+    PG --> GX[Gemini explanations for selected songs only]
+    GX --> EV{Every selected ID covered?}
+    GX -. failure .-> DR[Deterministic score reasons]
+    EV --> OUT[Ordered playlist, scores, warnings, AI or fallback labels]
+    DR --> OUT
+    SW --> OUT
+    Q[Question in Ask tab or --ask] --> QP[Gemini or offline parser: structured query]
+    QP --> QV{Python query validation}
+    QV --> RET[Python retrieval from catalog and playlist]
+    OUT --> RET
+    RET --> GA[Gemini phrases an answer from retrieved records only]
+    GA --> CC{Citation check}
+    CC -->|passes| ANS[AI answer with sources]
+    CC -->|fails| DET[Deterministic catalog lookup]
+    QV -. lyrics, biography, trivia .-> REF[Honest refusal]
+    OUT --> SC{System checks}
+    SC --> HR[Human review]
+    ANS --> HR
+    DET --> HR
+    ORCH --> LOG[Logging with key redaction]
+    OUT --> TEST[Tests and evaluation.py]
+    ANS --> TEST
 ```
 
-Numerical features reward closeness to a target, not high values by default. Every component is between 0 and 1. A separate ordering utility applies only to dynamic structures so a workout can begin moderately, peak, and cool down without misrepresenting the compatibility score. Consistent study/relaxation playlists retain straightforward descending-score order.
+The full, commented source is [`diagrams/architecture.mmd`](diagrams/architecture.mmd).
 
-## Dataset
+**How to read it:** a request enters through the dashboard or CLI. Gemini, or the offline interpreter if Gemini fails, produces a profile, and Python validates it against what the active catalog actually contains. Hard constraints filter the catalog; Python scores and orders what is left. Gemini may explain the chosen songs, but only if its explanations cover exactly those IDs. The chatbot runs the same pattern in reverse: Python retrieves first, and Gemini may only phrase what was retrieved. People check results through the System checks panel and the Details view, and by editing the language overrides. Tests and the evaluation script check the system automatically.
 
-`data/songs.csv` contains 50 fictional songs. The original 17 records were preserved and 33 fictional records were added for broader genre, mood, energy, and tempo coverage. All titles, artists, and attributes are synthetic classroom data—not verified claims about real music. Energy, valence, danceability, and acousticness must be within 0–1; tempo must be within 40–220 BPM; IDs must be unique. This is the default catalog and the offline fallback.
-
-`data/real_songs.csv` is an optional second catalog of **real tracks**, described in [Real-music catalog](#real-music-catalog). It uses the same columns and the same validation, plus cover, album, release date, and link fields.
+| Component | Allowed to | Never allowed to |
+| --- | --- | --- |
+| Gemini interpreter (`GeminiService.interpret`) | Propose a profile, constraints and priorities | Pick songs, set scores, name languages the catalog lacks |
+| Profile validator (`src/profiles.py`) | Clamp, replace or drop values, with warnings | Silently drop a request |
+| Scorer and sequencer (`src/playlist.py`) | Compute every score and the order | Use anything but catalog fields |
+| Gemini explainer | Describe already-selected songs | Change order, scores or metadata |
+| Chatbot (`src/chatbot.py` + `GeminiService`) | Answer from retrieved records, with citations | Answer from memory, cite unretrieved songs, quote unverified numbers |
+| Language labeler (build time only) | Estimate each real track's language, marked as an estimate | Run at playlist time, or override a manual correction |
 
 ## Setup
 
-Python 3.10 or newer is recommended.
+Python 3.10 or newer. From the project folder:
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+.venv\Scripts\Activate.ps1          # macOS/Linux/Git Bash: source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-Create a Gemini API key in [Google AI Studio](https://aistudio.google.com/apikey), then expose it as an environment variable. Do not paste it into source code or commit it.
+**Optional Gemini key.** Without one, everything runs offline and is labeled that way. Create a key in [Google AI Studio](https://aistudio.google.com/apikey), then use any one of these (never commit the key):
 
 ```powershell
+Copy-Item .env.example .env                                   # then set GEMINI_API_KEY in .env (git-ignored)
+# or
 $env:GEMINI_API_KEY="your-key-here"
-# Optional; defaults to gemini-2.5-flash
-$env:GEMINI_MODEL="gemini-2.5-flash"
+# or, for the dashboard
+Copy-Item .streamlit\secrets.toml.example .streamlit\secrets.toml   # git-ignored
 ```
 
-You can also copy `.env.example` to `.env` in the project root. `.env` is git-ignored, and both the CLI and the dashboard load it at startup through `src/env.py` (needs `python-dotenv`, which is in `requirements.txt`). Variables you set in the shell or in Streamlit secrets take priority over `.env`.
-
-For the Streamlit dashboard you can use the same environment variable, or Streamlit secrets:
-
-```powershell
-Copy-Item .streamlit\secrets.toml.example .streamlit\secrets.toml
-# then edit .streamlit\secrets.toml and set GEMINI_API_KEY (and optionally GEMINI_MODEL)
-```
-
-The dashboard checks `st.secrets` first and then `GEMINI_API_KEY` in the environment. `.streamlit/secrets.toml` is listed in `.gitignore`, so never commit it. The key is passed straight to `GeminiService(api_key=...)` and is never displayed, logged, or written to the CSV export.
-
-The Gemini integration follows Google's structured-output guidance: [Gemini structured outputs](https://ai.google.dev/gemini-api/docs/structured-output) and the [Google Gen AI Python SDK](https://googleapis.github.io/python-genai/).
+Order of precedence: Streamlit secrets, then the environment, then `.env`. `GEMINI_MODEL` defaults to `gemini-2.5-flash`. The free tier currently allows **20 requests per day** for that model. When the quota runs out, the app falls back to local interpretation and deterministic answers, and labels them.
 
 ## Run
 
-Interactive mode:
-
 ```powershell
-python -m src.main
-```
+# Dashboard
+streamlit run streamlit_app.py
 
-Scripted request with Gemini when a key is available:
-
-```powershell
+# CLI: playlist only, using Gemini when a key is available
 python -m src.main -r "Make a 10-song high-energy gym workout with a warm-up and cooldown"
+
+# CLI: guaranteed offline, real-music catalog, ask the chatbot two questions, log each step
+python -m src.main --offline --verbose --catalog data/real_songs.csv `
+  -r "I am working out I want 15 songs all in spanish kinda recent" `
+  --ask "What album is #1 from?" --ask "Is there anything quieter than #2?"
+
+# Tests and evaluation
+python -m pytest -q
+python evaluation.py              # offline + mocked Gemini; add --live for a labeled live pass, --write to save
 ```
 
-Guaranteed local mode:
+## Sample interactions
 
-```powershell
-python -m src.main --offline -r "Give me 10 relaxing low-energy songs for studying with a steady feel"
+All outputs below are copied from real runs on November 16, 2026. Long playlists are trimmed with `...`.
+
+### 1. Spanish workout, real catalog, offline, plus chatbot questions
+
+This is the request that originally failed: Gemini returned mostly English, older songs, because the system had no concept of language.
+
+```text
+$ python -m src.main --offline --catalog data/real_songs.csv -r "I am working out I want 15 songs all in spanish kinda recent" --ask "What album is #1 from?" --ask "Is there anything quieter than #2?" --ask "What are the lyrics of #3?"
+
+Workout VibeMatch
+=================
+Request: I am working out I want 15 songs all in spanish kinda recent
+Detected activity: workout
+Inferred profile:
+{
+  "activity": "workout",
+  "playlist_length": 15,
+  "preferred_genres": ["latin", "reggaeton"],
+  "target_mood": "intense",
+  "target_energy": 0.86,
+  "target_tempo_bpm": 138.0,
+  "playlist_structure": "warmup_peak_cooldown",
+  "language": "spanish",
+  "language_strict": true,
+  "min_release_year": 2021,
+  "max_release_year": null,
+  "recency_strict": false,
+  ...
+}
+AI status: interpretation=local fallback, explanations=deterministic
+Warning: Gemini was not used; local keyword-based interpretation is active.
+Warning: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+
+Ordered playlist (14 songs):
+
+ 1. Con Silenciador — El Alfa, Anuel AA [latin, intense]
+    Compatibility: 87.61/100 | energy=0.81 (position target=0.58) | tempo=116 BPM
+    Why: energy fit 77%; genre fit 100%
+ 2. Ojos Colorados — Junior H, Alto Linaje [latin, confident]
+    Compatibility: 73.20/100 | energy=0.74 (position target=0.69) | tempo=108 BPM
+    Why: energy fit 95%; genre fit 100%
+ 3. Que Le De — Rauw Alejandro, Nicky Jam [reggaeton, confident]
+    Compatibility: 71.32/100 | energy=0.75 (position target=0.80) | tempo=100 BPM
+    Why: energy fit 95%; genre fit 100%
+ 4. Beso Al Aire (feat. América Sierra & Smoky) — 3BallMTY, América Sierra [traditional mexicano, euphoric]
+    Compatibility: 59.44/100 | energy=0.92 (position target=0.91) | tempo=132 BPM
+    Why: energy fit 100%; genre fit 70%
+...
+14. La Lechuza Hace Shh — Leoncito Alado [other, peaceful]
+    Compatibility: 40.95/100 | energy=0.10 (position target=0.48) | tempo=120 BPM
+    Why: energy fit 62%; tempo fit 90%
+
+Questions about this playlist and catalog:
+
+Q: What album is #1 from?
+[Catalog lookup] #1 Con Silenciador by El Alfa, Anuel AA: from the album “El Hombre”.
+Sources: ID 78 Con Silenciador
+
+Q: Is there anything quieter than #2?
+[Catalog lookup] 10 songs are quieter than #2 Ojos Colorados by Junior H, Alto Linaje (energy 0.74):
+- #14 La Lechuza Hace Shh by Leoncito Alado: energy 0.10
+- #11 Que Hay Que Hacer by Gerardo Coronel: energy 0.27
+...
+Sources: ID 1 La Lechuza Hace Shh; ID 8 Que Hay Que Hacer; ...
+
+Q: What are the lyrics of #3?
+[Catalog lookup] The catalog doesn't contain that. I can only answer from each song's title, artist, album, release year, genre, mood, language, tempo, and energy.
 ```
 
-The terminal displays the detected activity, full inferred profile, AI/fallback status, warnings, ordered records, compatibility scores, position energy targets, and explanations.
+What this shows: the hard Spanish constraint was honored (14 of 14 songs are Spanish), the shortage was reported instead of padding with English songs, "kinda recent" stayed a soft preference, and the chatbot refused a question the data cannot answer. The low energies near the end are honest too: the catalog has only 4 Spanish tracks at workout energy, so a better Spanish workout needs Spanish seed tracks (see [Real-music catalog](#real-music-catalog)).
+
+### 2. Gemini turned on (live)
+
+Live interpretation and chat, from `python evaluation.py --live` with the current code (full report in [`evaluation_results.txt`](evaluation_results.txt)):
+
+```text
+  [LIVE Gemini] spanish workout
+    interpretation=Gemini; language=spanish hard=True; years>=2019
+    returned=14 of requested=15; spanish_share=100%; released_2019_or_later=50%; catalog_only=True; unique_ids=True
+    note: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+    note: Gemini explanations failed (ClientError); showing deterministic reasons.
+
+  [LIVE Gemini]
+    PASS [AI answer] Which songs are over 140 BPM? -> Six songs are over 140 BPM: "A Lot More Free" (143 BPM), "Silver Lining" (144 BPM), "You C
+```
+
+Gemini read "all in Spanish" as a hard constraint and chose its own recency cutoff (2019, versus the offline interpreter's 2021). Its BPM answer passed every citation check. The explanation step and most chat questions in that run hit the free-tier daily quota (`ClientError`, HTTP 429). Each fell back to deterministic output with a visible note, which is the designed behavior.
+
+A complete live CLI run, recorded earlier the same day with the Draft 1 version (before language constraints and graded scoring existed):
+
+```text
+$ python -m src.main -r "Make a 6-song high-energy gym workout with a warm-up and cooldown"
+
+Workout VibeMatch
+=================
+Request: Make a 6-song high-energy gym workout with a warm-up and cooldown
+Detected activity: workout
+Inferred profile:
+{
+  "activity": "workout",
+  "playlist_length": 6,
+  "preferred_genres": ["electronic", "hip-hop", "pop"],
+  "target_mood": "energetic",
+  "target_energy": 0.9,
+  "target_tempo_bpm": 140.0,
+  "playlist_structure": "warmup_peak_cooldown"
+}
+AI status: interpretation=Gemini, explanations=Gemini
+
+Ordered playlist (6 songs):
+
+ 1. Circuit Focus — Signal Garden [electronic, focused]
+    Compatibility: 71.92/100 | energy=0.67 (position target=0.62) | tempo=124 BPM
+    Why: This electronic track is ideal for maintaining focus during your workout circuits.
+ 2. Second Wind — Peak Motion [electronic, energetic]
+    Compatibility: 98.91/100 | energy=0.92 (position target=0.91) | tempo=148 BPM
+    Why: Its high energy and fast tempo make this electronic song perfect for pushing through your workout.
+ 3. Fireline Steps — Rapid Atlas [hip-hop, energetic]
+    Compatibility: 96.68/100 | energy=0.89 (position target=0.98) | tempo=142 BPM
+    Why: This energetic hip-hop track will keep your workout intensity high.
+ 4. Summit Signal — Altitude Zero [electronic, intense]
+    Compatibility: 73.33/100 | energy=0.98 (position target=0.98) | tempo=160 BPM
+    Why: With its intense mood and very high energy, this electronic song is great for peak workout performance.
+ 5. Neon Ascent — Pulse Theory [electronic, euphoric]
+    Compatibility: 73.58/100 | energy=0.90 (position target=0.89) | tempo=128 BPM
+    Why: This euphoric electronic track provides high energy to uplift your workout.
+ 6. Steady State — Pattern Study [electronic, focused]
+    Compatibility: 70.27/100 | energy=0.48 (position target=0.52) | tempo=100 BPM
+```
+
+> **Student placeholder:** If you run a live Gemini check yourself, record the date, model, request, and whether the dashboard showed *Gemini* for interpretation and explanations. Paste only text you observed.
+
+### 3. Guardrails and reliability behavior
+
+```text
+$ python -m src.main --offline -r "   "
+Error: Playlist request cannot be empty.
+
+$ python -m src.main --offline -r "Make 60 songs for a party"
+Warning: Requested 60 songs; the maximum playlist length is 50, so 50 will be returned.
+Ordered playlist (50 songs):
+
+$ python -m src.main --offline -r "15 spanish songs for a workout"          # fictional catalog has no language data
+Warning: This catalog has no language information, so the spanish request was ignored. Switch to the real-music catalog to filter by language.
+
+$ python -m src.main --offline --catalog data/real_songs.csv -r "20 songs all in portuguese for running"
+Warning: Only 9 Portuguese songs fit this catalog; returning 9 instead of 20.
+```
+
+Bad AI answers caught by the chatbot's checks (mocked Gemini in `evaluation.py`, where two answers are deliberately bad):
+
+```text
+    PASS [Catalog lookup] Is there anything quieter than #3? -> 6 songs are quieter than #3 Shoot to Thrill by AC/DC (energy 0.90):
+         note: The AI answer was discarded because it did not give the energy that was asked for; showing a catalog lookup instead.
+    PASS [Catalog lookup] When was Blinding Lights released? -> Blinding Lights by The Weeknd: released in 2020.
+         note: The AI answer was discarded because it cited song ID 999, which was not retrieved; showing a catalog lookup instead.
+```
+
+The step-by-step log (`--verbose`) for the Spanish request:
+
+```text
+INFO src.app: Playlist request on real_songs.csv (offline=True): I want 15 songs all in spanish for a workout
+INFO src.app: Profile (local): activity=workout length=15 language=spanish hard years=None-None structure=warmup_peak_cooldown
+INFO src.app: Playlist ready: 14 of 15 songs, explanations=deterministic, 2 warning(s), 3 ms
+INFO src.app: Warning shown to user: Only 14 Spanish songs fit this catalog; returning 14 instead of 15.
+```
+
+## How the AI pieces work
+
+### Request interpretation and constraints
+- Gemini receives a JSON schema whose `language` options are built from the languages the active catalog actually contains, so it cannot ask for a language that doesn't exist. Python then re-validates everything: numbers are clamped, unknown labels are replaced with warnings, and a constraint the catalog can't answer (for example, language on the fictional catalog) is dropped **with a visible warning**, never silently.
+- **Hard versus soft:** "all / only / just Spanish" filters the catalog; "preferably / some / kinda" adds score. The offline interpreter reads the same distinctions, plus numbers before or after the noun ("15 spanish songs", "spanish 15"), "recent / new" and decades ("the 90s").
+- Workouts and runs keep their warm-up, peak and cooldown arc unless the user explicitly asks for steady energy. When Gemini proposes "consistent" for a workout, Python corrects it and adds a note to Details.
+
+### Scoring (Python only)
+- Default score out of 100 = 0.35 × energy fit + 0.25 × mood fit + 0.25 × genre fit + 0.15 × tempo fit. Each fit is between 0 and 1.
+- Mood and genre give documented **partial credit** for close labels (latin and reggaeton 0.8, chill and peaceful 0.8); unrelated labels get 0.
+- Soft language and recency preferences join as their own features. Gemini may suggest *priorities* per feature; Python clamps each to 0.05–0.60 and normalizes, so a suggestion can neither zero out nor dominate a feature. Gemini never outputs a song-level number. Contributions always sum to the score, shown in Score details.
+- Energy is compared with each position's target, so the arc never inflates a score. Ties break on song ID, so results are deterministic.
+
+### Catalog chatbot (retrieval-augmented generation)
+1. **Understand:** Gemini, or the offline parser, turns the question into a structured query (target songs, fields, filters, comparisons, sort). Python drops anything unknown.
+2. **Retrieve:** Python runs the query against the catalog and the current playlist, with fuzzy title matching, and caps the results at 10.
+3. **Answer:** Gemini writes one to three sentences from only those records and must cite their IDs. Python discards the answer if it cites a song that wasn't retrieved, quotes a number not in the records, leaves out any match, or skips the value asked for. The user then sees a deterministic catalog lookup with a note explaining why.
+4. **Refuse:** questions about lyrics, biographies, awards or trivia get "The catalog doesn't contain that", not a guess.
+
+Every answer is labeled **AI answer** or **Catalog lookup** and lists its sources. Input is limited to 300 characters and 6 questions a minute.
 
 ## Streamlit dashboard
 
-```powershell
-streamlit run streamlit_app.py
-```
-
-Then open the local URL Streamlit prints (usually `http://localhost:8501`).
-
-### What the dashboard shows
-
-| Area | Contents |
+| Area | What it shows |
 | --- | --- |
-| Header | App name, a one-line description of the Gemini/Python split, and a Gemini status badge: *available (API key configured)*, *SDK not installed*, or *no API key*. "Available" means a key is configured. Whether a call worked is only shown after you generate. |
-| Request form | Natural-language text area, example requests (workout, studying, relaxing, driving, running, party), a **Use Gemini** toggle (disabled with an explanation when no key/SDK is present), and **Generate playlist**. It's an `st.form`, so Gemini is called only on submit, never on reruns. Empty requests are rejected. A spinner shows while generation runs. |
-| AI and fallback status | Separate labels for **request interpretation** (Gemini / Local fallback) and **explanations** (Gemini / Deterministic reasons), a success, partial-fallback, or offline notice, and an expandable list of every validation, API, fallback, and catalog warning. Local fallback output is never described as AI-generated. |
-| Inferred preference profile | Activity, playlist length, preferred genres, target mood, target energy, target tempo, and playlist structure, all after Python validation. |
-| Catalog switch | A **Catalog** control in the form chooses *Fictional classroom songs* (default) or *Real music*. It is disabled, with an explanation, when `data/real_songs.csv` has not been built. |
-| Playlist length | Up to **50** songs (`MAX_PLAYLIST_LENGTH` in `src/profiles.py`, shared with the Gemini schema). A longer request is trimmed to 50, and a smaller catalog returns what it has. Either way a **Playlist length adjusted** warning names the requested and returned counts, the *Songs returned* metric explains it, and System checks lists it. Nothing is trimmed silently. |
-| Playlist tab | A responsive grid of ordered cards: three columns on a laptop, two at mid width, one on a narrow window. Each card has cover art (a generated tile for fictional songs), a title clamped to two lines, artist, a rank chip, the score as a gradient pill, genre and mood, an energy meter whose fill is the song's energy and whose white tick is the position's target, tempo, the explanation, a sourced "where it's from" line, a **Play** button, and an **Open in Spotify** link when a Spotify ID exists. Below the grid are the **Download playlist CSV** button and a *Table view* with rank, ID, title, artist, genre, mood, score, energy, target energy, tempo, and explanation. |
-| Now playing (sidebar) | Stays visible while you scroll. Shows the selected track's cover, a sourced album/year note, an **Open in Spotify** button, a Spotify player, and a 30-second preview fetched fresh from Deezer (Apple as fallback). Missing previews or covers degrade to a short message or a placeholder. |
-| Energy flow tab | Altair chart of actual song energy (violet line with a gradient fill) versus the position's target energy (dashed coral line). Warm-up playlists also get labeled *Warm-up*, *Peak*, and *Cooldown* bands. A generated `alt` description summarizes the shape. |
-| Score details tab | Per-feature score points (energy, mood, genre, tempo) for every song. A song inspector shows earned versus maximum points, the deterministic reason, and the Gemini explanation when one exists. No model reasoning is requested or shown. |
-| System checks tab | Re-verifies the finished result against the CSV: IDs exist, metadata matches, IDs are unique, returned versus requested length, and deterministic re-selection on the validated profile (Python only, no Gemini call). It also lists which steps used Gemini or the fallback, plus all warnings. |
-| Catalog tab | Song, genre, and mood counts, energy and tempo ranges, and a table filterable by genre, mood, and energy, for whichever catalog is selected. The fictional catalog is labeled fictional/synthetic classroom data. The real catalog is labeled as third-party data with derived moods. |
-| Data sources and attribution | An expander at the bottom names every source and states that their terms of use were not independently verified. |
+| Header | Gemini status (key configured, SDK missing, or no key) and the active catalog. "Available" means a key exists; whether a call worked is shown only after you generate. |
+| Request form | Example requests, a **Use Gemini** toggle, a **Catalog** switch (Fictional / Real music), and **Generate**. It's an `st.form`, so Gemini is called only on submit. |
+| Status | Separate labels for interpretation (Gemini or local fallback) and explanations (Gemini or deterministic), a plain notice when no AI was used, and a visible **Playlist length adjusted** notice whenever you get fewer songs than you asked for. |
+| Profile | Activity, length, mood, energy, tempo, structure, and, when present, **Language** (only or preferred) and **Release years**, plus notes about adjustments. |
+| Playlist | A responsive card grid with album covers (generated tiles for fictional songs), score pills, an energy meter with the position's target, explanations, sourced album and year notes, **Play** and **Open in Spotify**. A table view and CSV download are below it. |
+| Now playing (sidebar) | Cover, sourced note, Spotify player, and a 30-second preview fetched fresh. |
+| Ask | The catalog chatbot with suggestion chips, labels and sources. |
+| Energy flow | Actual energy against target energy, with warm-up, peak and cooldown bands. |
+| Score details | Per-feature points using the weights this playlist actually used, and a per-song inspector. |
+| System checks | Re-verifies IDs, metadata, uniqueness, length and determinism; lists AI or fallback use and all warnings. |
+| Catalog | Counts, ranges and a filterable table, labeled fictional or third-party as appropriate. |
 
-The CSV export contains rank, verified catalog metadata, compatibility score, position target energy, per-feature points, deterministic reason, displayed explanation, explanation and interpretation sources, and activity. For the real catalog it also has album, release date, cover URL, ISRC, Spotify URL, and the sourced note with its source. It contains no credentials and no preview URLs (those expire).
-
-### Offline behavior
-
-With no key (or with **Use Gemini** off), the dashboard runs the same local keyword interpreter and deterministic reasons as `python -m src.main --offline`. It shows *Local fallback* / *Deterministic reasons* and the notice "No AI model was used for this playlist." If Gemini is on but a call fails (network, authentication, missing SDK, or invalid JSON), the result still renders, labeled as a partial or full fallback, with the failure type in the warnings.
-
-### Implementation notes
-
-- `streamlit_app.py` contains only UI code. It calls `create_playlist()` from `src/app.py`.
-- `src/dashboard_data.py` turns `PlaylistResult` objects into tables, chart data, checks, and CSV. It never scores or reorders songs.
-- `GeminiService` gained an optional keyword-only `api_key` argument and an `sdk_installed()` helper. The existing constructor, fake-client injection, and `GEMINI_API_KEY` behavior are unchanged.
-- The catalog is loaded with `st.cache_data`. The latest result is kept in `st.session_state` so it survives reruns such as switching tabs, inspecting songs, or filtering the catalog.
-- **Design system ("Midnight Vinyl"):** a deep plum background (`#0d0a1a`) with two soft glows, an electric-violet primary (`#9d8cff`), and a warm coral secondary (`#ff9a6b`). The two meet only as one violet-pink-coral gradient, used for the title, primary buttons, score pills, and energy meters. Space Grotesk is used for headings and Inter for body text, both loaded from Google Fonts with a system-font fallback. Tracking tightens as text grows and loosens on small uppercase labels. The hero and the "Now playing" panel are translucent blurred surfaces. Colors are defined in both `.streamlit/config.toml` (so native widgets match) and CSS variables.
-- **Contrast:** every text and background pairing was checked against WCAG AA. The lowest is primary-colored text on a card surface at 6.4:1. Dark text sits on the gradient (6.9:1 or better), and body text on the background is 17.4:1.
-- **Motion:** only `transform` and `opacity` are transitioned, at 120–180 ms with a strong ease-out. Cards lift 3px on hover (real pointers only), buttons scale to 0.97 when pressed, and nothing animates on page load or rerun. `prefers-reduced-motion` removes motion, `prefers-reduced-transparency` swaps glass for solid surfaces, and `prefers-contrast: more` strengthens borders and drops the gradient title.
-- The only custom CSS is [`assets/vibematch.css`](assets/vibematch.css), loaded with `st.html(Path(...))`. It mostly targets documented `st.container(key=...)` classes; the few selectors that depend on Streamlit's internal markup (`.stApp`, images, primary-button test IDs, the grid's children) are labeled FRAGILE in the file. Delete the file and the one `st.html` line to return to pure native Streamlit. `unsafe_allow_html` is not used.
-- `src/media.py` builds Spotify links and the sourced notes from catalog fields and fetches previews. It never scores, selects, or reorders songs. Notes are assembled directly from album, release year, and genre; Gemini does not write them, and a row with no album or year gets no note.
-- The "Now playing" panel lives in the sidebar so Play on a card at the bottom of a long playlist doesn't require scrolling back up.
+The design ("Midnight Vinyl") uses a deep plum background, a violet-to-coral accent gradient, Space Grotesk and Inter. Every text pairing passes WCAG AA, the lowest at 6.4:1. Motion uses only transform and opacity, with hover limited to real pointers, and respects reduced-motion, reduced-transparency and high-contrast settings. The only custom CSS is [`assets/vibematch.css`](assets/vibematch.css), which can be deleted to return to plain Streamlit. `unsafe_allow_html` is never used.
 
 ## Real-music catalog
 
-The real catalog is built once by a script you run yourself, then committed as a normal CSV. The app never builds it at runtime, so playlists stay deterministic and work offline once the file exists.
+`data/real_songs.csv` (95 tracks) was built once by `scripts/build_real_catalog.py` from keyless third-party sources:
+- [ReccoBeats](https://reccobeats.com): track discovery and audio features.
+- [Deezer](https://developers.deezer.com): covers, albums, release dates and genres.
+- Spotify: links and players.
+
+The app never builds it at runtime.
+
+- **Mood is derived** from valence and energy by the documented rules in `derive_mood()`.
+- **Language is estimated** once at build time. Gemini labels each track from its title, artist, album and genre, and Python validates the label against a fixed list. Without a key, a rule-based guess is used. Each row records `language_source` and `language_confidence`. Corrections in [`data/language_overrides.csv`](data/language_overrides.csv) always win; one is already there, for a track Gemini wrongly marked instrumental.
+- Current language mix (estimates): 48 English, 14 Spanish, 9 Portuguese, and a few each of other languages.
 
 ```powershell
-python scripts/build_real_catalog.py                 # about 100 tracks
-python scripts/build_real_catalog.py --target 120 --allow-explicit
-```
-
-Sources, all keyless and unofficial third-party services that can change:
-
-| Need | Source |
-| --- | --- |
-| Track discovery, Spotify IDs, ISRCs, energy, tempo, valence, danceability, acousticness | [ReccoBeats](https://reccobeats.com) |
-| Cover art, album, release date, genre (by ISRC) | [Deezer public API](https://developers.deezer.com) |
-| Playable player and links | [Spotify](https://open.spotify.com) embed and track URLs |
-| 30-second previews (fetched fresh, never stored) | Deezer, with Apple as fallback |
-
-How it works:
-
-1. Seeds come from `data/seed_tracks.txt` (Spotify links, one per line) if you create it. Otherwise it starts from one verified Spotify ID.
-2. ReccoBeats ignores energy and tempo filters on its recommendation endpoint (tested), so recommendations only resemble the seed. To cover calm music too, the builder repeatedly re-seeds from the discovered track nearest the emptiest 0.1-wide energy band.
-3. Python filters drop explicit tracks by default, live/remix/karaoke/holiday titles, kids and soundtrack genres, missing or out-of-range features, duplicate ISRCs, and more than two tracks per artist. It then spreads the kept tracks across the energy range.
-4. Genre is mapped from Deezer. **Mood is derived**, not provided by any source, using the documented rules in `derive_mood()`, into the same mood vocabulary the scorer already uses.
-
-The checked-in file was built on November 16, 2026 from the single default seed: 95 tracks, energy 0.08–0.95, selected for variety rather than taste. It is eclectic, mixing languages and genres, and the builder printed a review list for you to prune. I removed five holiday and nursery-rhyme rows after the first run. Review it yourself and delete rows you don't want; IDs only need to stay unique. Adding your own seeds in `data/seed_tracks.txt` and re-running gives a catalog closer to your taste.
-
-MusicBrainz enrichment was considered and **not implemented**, so the "where it's from" notes contain only album, release year, and genre. Creating a playlist inside a Spotify account requires user login and is out of scope; each song has a link and a player instead.
-
-## Example results
-
-These abbreviated outputs were produced with the deterministic offline mode on November 16, 2026.
-
-### Workout
-
-Input: `Make a 10-song high-energy gym workout with a warm-up and cooldown`
-
-```text
-activity=workout; structure=warmup_peak_cooldown; length=10
-energies=[0.67, 0.91, 0.93, 0.96, 0.98, 0.93, 0.92, 0.90, 0.72, 0.48]
-first/middle/last: Circuit Focus / Final Rep / Steady State
-```
-
-### Study
-
-Input: `Give me 10 relaxing low-energy songs for studying with a steady feel`
-
-```text
-activity=studying; structure=consistent; length=10
-top 3: Notebook Sunrise (98.78), Quiet Geometry (97.23), Focus Flow (96.33)
-```
-
-### Relaxation
-
-Input: `Create 8 peaceful songs for relaxing after work`
-
-```text
-activity=relaxing; structure=consistent; length=8
-top 3: Cloud Notes (98.12), Window Seat Dreams (98.08), Ocean Breathing (96.03)
+python scripts/build_real_catalog.py                        # rebuild, about 100 tracks (seeds: data/seed_tracks.txt)
+python scripts/build_real_catalog.py --label-languages-only # only re-estimate the language column
 ```
 
 ## Reliability and guardrails
 
-- Structured JSON schema constrains Gemini's interpretation and explanation output.
-- Python performs semantic validation after schema-constrained generation.
-- Unsupported activities, genres, moods, and structures are replaced or ignored with warnings.
-- Energy and tempo inputs are clamped; non-finite values receive safe defaults.
-- CSV types, ranges, and duplicate IDs are validated before scoring.
-- Only records loaded from the catalog can enter a playlist.
-- Explanation IDs must exactly cover selected IDs; otherwise deterministic reasons are shown.
-- Network, authentication, SDK, and malformed-response failures use the local fallback.
-- Playlists are capped at 50 songs; requests above the cap or above the catalog size return fewer songs with a visible warning, never silently.
-- An empty catalog raises a clear error instead of crashing.
-- Tie-breaking uses song ID, making identical inputs deterministic.
+- **Schema plus semantic validation** on every Gemini response: profiles, explanations, chat queries and chat answers.
+- **Catalog-only output:** only validated CSV rows can enter a playlist or an answer. Explanation and chat citations must match retrieved IDs exactly.
+- **No silent behavior:**
+  - dropped constraints, length caps (50) and catalog shortages all produce visible warnings with counts;
+  - a workout can't silently become "steady";
+  - an empty catalog or empty request gives a clear error.
+- **Fallbacks** for missing keys, network errors, quota limits (429), the SDK not being installed, and malformed JSON. After an interpretation failure, the app skips the explanation call so the same outage doesn't fail twice.
+- **Determinism:** ID tie-breaks, and Python-only scoring with bounded priorities.
+- **Logging** (`src/logging_setup.py`): every pipeline and chatbot step, with counts and timing. User text is truncated, and anything that looks like an API key is redacted, which a test enforces.
+- **Secrets:** `.env` and `.streamlit/secrets.toml` are git-ignored. The key never appears in the UI, logs or CSV export.
 
-## Tests and evaluation
+## Testing summary
 
 ```powershell
-python -m pytest -q
-python evaluation.py
+python -m pytest -q        # 179 passed (November 16, 2026); every network call is mocked
+python evaluation.py       # constraint, determinism and chatbot evaluation
 ```
-
-Latest verified local result (November 16, 2026):
 
 ```text
-91 passed
-
-tests/test_recommender.py       5 passed   (original Project 3 tests)
-tests/test_vibematch.py        13 passed   (original Project 4 tests)
-tests/test_dashboard.py        13 passed   (dashboard, Gemini labeling, CSV)
-tests/test_dashboard_real.py   12 passed   (real-catalog cards, player, notes, 30-card and trim warnings)
-tests/test_media.py             6 passed   (links, notes, preview fallbacks)
-tests/test_catalog_builder.py  27 passed   (filters, mood rules, enrichment)
-tests/test_playlist_length.py   8 passed   (50-song cap, visible trim warnings, empty catalog)
-tests/test_design.py            7 passed   (HTML escaping, meter accessibility, chart bands, CSS rules)
+tests/test_recommender.py       5 passed   original Module 3 scorer (unchanged)
+tests/test_vibematch.py        13 passed   original Project 4 core tests
+tests/test_dashboard.py        13 passed   dashboard, Gemini labeling, CSV, secrets
+tests/test_dashboard_real.py   12 passed   real-catalog cards, player, notes, length warnings
+tests/test_playlist_length.py   8 passed   50-song cap, visible trims, empty catalog
+tests/test_constraints.py      20 passed   language/year validation, offline parsing, Gemini schema
+tests/test_scoring.py          20 passed   similarity tables, bounded weights, hard filters, dashboard display
+tests/test_languages.py        16 passed   language vocabulary, rule estimates, overrides, build-time labeler
+tests/test_chatbot.py          28 passed   query validation, retrieval, citation checks, refusals, Ask tab
+tests/test_catalog_builder.py  27 passed   discovery, filters, mood rules, enrichment
+tests/test_media.py             6 passed   links, sourced notes, preview fallbacks
+tests/test_design.py            7 passed   HTML escaping, accessibility, chart bands, CSS rules
+tests/test_logging.py           4 passed   step logs, truncation, key redaction
 ```
 
-One original assertion changed deliberately: `test_profile_validation_clamps_numbers_and_replaces_categories` used to expect a 999-song request to clamp to 20. It now expects `MAX_PLAYLIST_LENGTH` (50). Every other original test is unchanged. Every test that touches the network is mocked.
+Evaluation results ([`evaluation_results.txt`](evaluation_results.txt)):
 
-> Note: in the verification environment the default pytest temp folder was not writable, so the suite was run as `python -m pytest -q -p no:cacheprovider --basetemp=<writable folder>`. The test code is the same either way.
+| Check | Offline | Mocked Gemini | Live Gemini |
+| --- | --- | --- | --- |
+| Constraints read correctly (5 runs) | 5/5 | 1/1 | Spanish read as hard ✓ |
+| Hard Spanish share of returned songs | 100% | 100% | 100% |
+| Deterministic, catalog-only, unique IDs | all ✓ | all ✓ | ✓ |
+| Chatbot answers correct | 8/8 | 8/8 | 8/8 (7 via fallback after quota) |
+| Off-catalog questions refused | 2/2 | 2/2 | 2/2 |
+| Bad AI answers rejected | n/a | 2 of 2 planted | 0 shown were bad |
 
-Dashboard tests (`tests/test_dashboard.py`, using `streamlit.testing.v1.AppTest` for the UI):
+**What worked:** the constraints, shortage warnings, determinism and refusals held in every mode, and every AI failure, including real quota errors, degraded to labeled deterministic output.
 
-```text
-tests/test_dashboard.py::test_dashboard_loads_without_api_key PASSED
-tests/test_dashboard.py::test_empty_request_cannot_generate PASSED
-tests/test_dashboard.py::test_preset_fills_request_box PASSED
-tests/test_dashboard.py::test_offline_request_generates_labeled_fallback_results PASSED
-tests/test_dashboard.py::test_dashboard_results_contain_only_catalog_songs PASSED
-tests/test_dashboard.py::test_result_persists_across_reruns PASSED
-tests/test_dashboard.py::test_gemini_failure_is_labeled_as_fallback PASSED
-tests/test_dashboard.py::test_mocked_gemini_success_is_labeled_gemini PASSED
-tests/test_dashboard.py::test_gemini_toggle_off_uses_fallback_even_with_key PASSED
-tests/test_dashboard.py::test_system_checks_pass_for_offline_result PASSED
-tests/test_dashboard.py::test_playlist_csv_has_verified_fields_and_no_secrets PASSED
-tests/test_dashboard.py::test_gemini_service_accepts_explicit_api_key_without_exposing_it PASSED
-tests/test_dashboard.py::test_gemini_service_env_key_still_works PASSED
-13 passed in 4.56s
-```
+**What didn't, at first** (each was found by a test or the evaluation, then fixed and covered by a test):
+- **Silent 20-song cap:** asking for 30 songs returned 20.
+- **Language dropped:** "all in Spanish" returned English songs, because the profile had no language field.
+- **Hedge-word bug:** the word "ish" inside "span*ish*" turned every language request soft.
+- **Score over 100:** rounded weights produced a score of 100.01.
+- **Empty-catalog crash:** an empty catalog raised a bare `StopIteration`.
+- **Grounded-but-vague answers:** chatbot answers that were accurate but incomplete, or that ignored what was asked, passed the first checks. Coverage and asked-value checks were added.
 
-Dashboard startup check: `streamlit run streamlit_app.py --server.headless true --server.port 8765` started without errors, `/_stcore/health` returned `ok`, and `/` returned HTTP 200. The server was then stopped. Running the script itself (header, form, generation, tabs) is covered by the AppTest suite above.
+**Still limited:**
+- Live Gemini quality is measured on only a few requests, because the free tier allows 20 calls a day.
+- Language labels are estimates.
+- The real catalog is small, and only 4 Spanish tracks have workout-level energy.
 
-Visual check: with a throwaway script that seeds a finished playlist into the session, I loaded the dashboard in headless Microsoft Edge and inspected screenshots of both catalogs. Observed: real album covers in an aligned three-column card grid, the active card's accent edge, the sidebar's cover, Spotify player, and 30-second preview, and generated gradient tiles for fictional songs. Observed limitation: in a fresh headless browser the Material icon font loaded late, so icon names briefly showed as text and then rendered correctly after about 25 seconds. Not tested: mobile widths, Safari/Firefox, and clicking Play in a real browser (that path is covered by AppTest only).
-
-Visual check after the redesign (same method; headless Edge driven over the DevTools protocol with a real-time wait). Inspected at 1440, 1100, and 800px wide:
-
-- A 30-song real-catalog playlist showed *Playlist length 30* and *Track 1 of 30*.
-- The responsive grid gave three, two, and one column respectively.
-- The chart showed Warm-up, Peak, and Cooldown bands.
-- A seeded worst case (a 240-character title, a long artist list, a song with no cover, and a Japanese title with emoji in a 50-song playlist) rendered without overlap: the title clamped to two lines, the artist to one, and the missing cover became a gradient tile.
-
-The break-ui pass also found a real crash: an empty catalog raised a bare `StopIteration`. It now raises a clear `ValueError`, which the dashboard shows as an error message. Not inspected: light mode (the theme is dark-only by design), and the reduced-motion, reduced-transparency, and high-contrast modes, whose CSS rules exist and are checked by tests but were not viewed.
-
-Real-catalog check from the CLI (offline, `--catalog data/real_songs.csv`): a "12-song high-energy gym workout" returned energies `[0.57, 0.8, 0.9, 0.9, 0.94, 0.92, 0.92, 0.89, 0.88, 0.81, 0.67, 0.48]`, a moderate start, a peak, and a cooldown.
-
-The "Gemini" dashboard tests use an in-process fake client or a forced failure. They check labeling and validation, not live model quality.
-
-The automated suite covers CSV conversion and validation, legacy score math, normalized score closeness, descending consistent ranking, playlist length, catalog-only IDs, deterministic reruns, energy progression, malformed Gemini JSON, API failures, conflicting preferences, and catalog shortages. `evaluation.py` runs workout, study, and relaxation scenarios twice and reports ID validity, uniqueness, energy sequence, and determinism. See [`evaluation_results.txt`](evaluation_results.txt) for captured evidence.
-
-Live checks that were actually run on November 16, 2026:
-
-- **Gemini, CLI:** one live request, `python -m src.main -r "Make a 6-song high-energy gym workout with a warm-up and cooldown"`, using the key from `.env`. The output reported `interpretation=Gemini, explanations=Gemini`, all six songs came from the catalog, and the energies followed a warm-up, peak, and cooldown shape. That is a single request, not a quality, latency, or cost benchmark.
-- **ReccoBeats, Deezer, Apple, Spotify embed:** exercised live while building the real catalog and while viewing the dashboard (covers, previews, and the Spotify player loaded).
-
-Not tested live: the dashboard's Gemini path through a real browser session (the screenshots above used the offline fallback), and live Gemini against the real-music catalog. Those paths are covered by mocked tests only. The services above are unofficial and can change.
-
-> **Student placeholder:** If you run a live Gemini check yourself, record the date, model, request, and whether the dashboard showed *Gemini* for interpretation and explanations. Paste only text you observed.
+**What testing taught about this system:** schema-valid model output can still be wrong or incomplete, so the useful checks are semantic ones: do the cited IDs exist, do the numbers match, is every match covered. Mocking the model with deliberately bad answers was the fastest way to find gaps in those checks.
 
 ## Design decisions and trade-offs
 
-- The legacy scorer was preserved rather than overwritten, making the Project 3-to-4 change inspectable.
-- Gemini is optional and isolated behind `GeminiService`; this improves reliability and testability at the cost of a simpler offline interpretation.
-- Exact genre/mood matches are transparent but do not recognize related labels.
-- A progression penalty influences sequence placement but not the displayed compatibility score.
-- One-track-per-artist is preferred when enough unique artists exist; relaxing this constraint may sometimes improve pure score.
-- No RAG, vector database, learning loop, or multi-agent framework was added because the local structured catalog and deterministic task do not require them.
-- The real-music catalog is built once and saved to a CSV rather than fetched at runtime. That keeps selection deterministic, testable, and offline-capable, at the cost of staleness and a one-time review step.
-- Real music was added as a second catalog beside the fictional one, which stays the default, instead of replacing it.
-- Custom CSS was allowed for the first time, in one removable file, because Streamlit has no native hover states, fixed-aspect covers, or title clamping. Everything else stays native.
-- "Where it's from" notes are assembled from catalog fields instead of generated, so they can't contain invented facts. The trade-off is that they are short and generic.
+- **Gemini interprets and phrases; Python decides.** It's slower to build than letting the model choose songs, but the results are verifiable, deterministic and testable, and the app still works offline.
+- **Gemini suggests priorities, not scores.** Having it score songs was rejected: it would cost one call per song, break determinism, and let the model invent numbers. Bounded priorities give it influence without control.
+- **Retrieve first, then generate** for the chatbot, with answers discarded on any failed check. Some correct but loosely worded AI answers get replaced by plainer lookups; that's accepted in exchange for never showing an unverified fact.
+- **Language is estimated at build time, not at runtime.** It's an AI-written label, so it's marked as an estimate, reviewable, and overridable. Runtime stays offline-capable and costs no extra calls.
+- **Hard constraints never relax silently.** Returning 14 songs with an explanation beats returning 15 with one in the wrong language.
+- **The real catalog is a reviewed CSV, not a live API**, and stays a second option beside the fictional default.
+- **One small, removable CSS file**, because Streamlit has no native card hover, fixed-aspect covers or title clamping.
+- The original Module 3 scorer is preserved, so the before-and-after comparison stays inspectable.
 
 ## Limitations
 
-- The synthetic catalog is small and cannot represent real musical diversity.
-- Synthetic metadata reflects author-chosen values, not audio analysis.
-- The real catalog is only 95 tracks from one seed, so it is eclectic and skews toward whatever ReccoBeats recommends. It mixes languages and genres, and it includes some songs you may not want in a classroom demo; review and prune it.
-- ReccoBeats' recommendation filters for energy and tempo are ignored, so coverage of the calm and high-energy ends depends on the builder's re-seeding walk. Calm, positive-sounding tracks are scarce, so relaxing playlists lean on "peaceful" and "focused" moods.
-- Real-catalog moods are derived from valence and energy and are approximations. Audio features come from a third-party service and were not independently checked against the recordings.
-- ReccoBeats, Deezer, Apple, and Spotify embeds are unofficial or third-party services that can change or disappear, and their terms of use were not independently verified. Embeds depend on Spotify being reachable in your browser.
-- Keyword fallback interpretation is intentionally limited.
-- The system has no listening history, skips, likes, cultural context, or accessibility preferences.
-- Gemini explanations can sound fluent without adding evidence; validation restricts their inputs and IDs, but human review remains important.
-- The system plays only short previews and Spotify's own embedded player. It does not stream full tracks, and it should not be treated as a production music service.
+- The catalogs are small (50 fictional and 95 real songs), and the real one reflects whatever ReccoBeats recommended around a single seed. Spanish workout coverage is thin.
+- Real-catalog moods are derived and languages are estimated. Audio features come from a third-party service and were not checked against the recordings.
+- The offline interpreter is keyword-based, and misses negation and indirect phrasing.
+- The free Gemini tier (20 requests per day) limits live use and live evaluation.
+- The chatbot answers only from catalog fields; it can't discuss lyrics, artists' lives or popularity, by design.
+- Third-party services (ReccoBeats, Deezer, Apple previews, Spotify embeds) can change, and their terms were not independently verified. This is a classroom project, not a production music service.
 
 ## Project reflection
 
 > **Student placeholder:** Add 1–2 paragraphs in your own words about what you learned by combining probabilistic language interpretation with deterministic scoring, what surprised you during testing, and what you would change next. Do not submit this placeholder as your final personal reflection.
 
+## Portfolio
+
+- **Code:** https://github.com/gimenezdiego002/VibeMatch-AI
+
+> **Student placeholder:** Write a short paragraph, in your own words, on what this project says about you as an AI engineer.
+
 ## Presentation
 
-Use [`PRESENTATION.md`](PRESENTATION.md) for a timed 5–7 minute walkthrough with a network-free backup path.
+[`PRESENTATION.md`](PRESENTATION.md) has a timed 5–7 minute walkthrough of the dashboard, the chatbot and the reliability evidence, with a network-free backup path.

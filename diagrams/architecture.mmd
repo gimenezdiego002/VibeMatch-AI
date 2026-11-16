@@ -1,27 +1,52 @@
 flowchart TD
-    U[User natural-language request] --> CLI[CLI]
-    U --> UI[Streamlit dashboard form]
-    UI --> CLI_ORCH[create_playlist orchestrator]
-    CLI --> CLI_ORCH
-    CLI_ORCH --> GI[Gemini intent interpreter]
-    GI --> PV{Schema and semantic validation}
-    GI -. API error or invalid JSON .-> FB[Local keyword fallback]
+    %% ---------- Input ----------
+    U[User: natural-language playlist request] --> UI[Streamlit dashboard or CLI]
+    UI --> ORCH[create_playlist orchestrator]
+
+    %% ---------- Interpretation (AI with fallback) ----------
+    ORCH --> GI[Gemini interpreter: structured JSON profile + constraints]
+    GI -. API error, quota limit, or invalid JSON .-> FB[Local keyword interpreter]
+    GI --> PV{Python validation: clamp numbers, check genres, moods, languages, years against the active catalog}
     FB --> PV
-    PV --> PF[Validated PreferenceProfile]
-    PF --> SE[Python scoring engine]
-    CSV[(Local synthetic songs.csv)] --> CV{CSV range and type guardrails}
-    RCSV[(Optional real_songs.csv, built once)] --> CV
-    BLD[build_real_catalog.py: ReccoBeats features + Deezer covers, filters, derived mood] -. one-time, reviewed by a person .-> RCSV
-    CV --> SE
-    SE --> PG[Playlist generator]
-    PG --> DV[Artist diversity and energy-curve ordering]
-    DV --> GX[Gemini explanation service]
-    GX --> EV{Selected-ID coverage validation}
-    GX -. API error or invalid output .-> DR[Deterministic score reasons]
-    EV --> OUT[Ordered playlist and warnings]
+    PV --> PF[Validated profile: activity, length 1-50, mood, energy, tempo, structure, language and year constraints, bounded priorities]
+
+    %% ---------- Data ----------
+    CSV[(Fictional songs.csv)] --> CV{CSV type, range, and duplicate-ID guardrails}
+    RCSV[(Real songs: real_songs.csv)] --> CV
+    BLD[build_real_catalog.py: ReccoBeats features, Deezer covers, filters, derived mood] -. built once, reviewed by a person .-> RCSV
+    LANG[Gemini language estimate at build time, rule fallback, manual overrides] -. labels language column .-> RCSV
+
+    %% ---------- Deterministic selection ----------
+    PF --> HF{Hard filters: language or years marked 'only'}
+    CV --> HF
+    HF --> SE[Python scoring: energy, graded mood and genre similarity, tempo, soft language and recency]
+    SE --> PG[Sequencer: energy arc, artist diversity, ID tie-breaks]
+    HF -. too few songs .-> SW[Visible shortage warning with counts]
+
+    %% ---------- Explanations ----------
+    PG --> GX[Gemini explanations for selected songs only]
+    GX --> EV{Every selected ID covered?}
+    GX -. failure .-> DR[Deterministic score reasons]
+    EV --> OUT[Ordered playlist, scores, warnings, AI or fallback labels]
     DR --> OUT
-    OUT --> SC{Dashboard system checks: catalog IDs, uniqueness, length, determinism}
-    SC --> MEDIA[Cards, covers, Spotify links and sourced notes from catalog fields; previews fetched fresh]
-    MEDIA --> HR[Human review / listener choice]
-    OUT --> HR
-    OUT --> TEST[Automated tests and offline evaluation]
+    SW --> OUT
+
+    %% ---------- Catalog chatbot (RAG) ----------
+    Q[User question in Ask tab or --ask] --> QP[Gemini or offline parser: structured query]
+    QP --> QV{Python query validation: known fields, filters, limits}
+    QV --> RET[Python retrieval from catalog and current playlist]
+    OUT --> RET
+    RET --> GA[Gemini phrases an answer from retrieved records only]
+    GA --> CC{Citation check: cited IDs retrieved, numbers match, every match covered, asked values present}
+    CC -->|passes| ANS[AI answer with sources]
+    CC -->|fails| DET[Deterministic catalog lookup]
+    QV -. lyrics, biography, trivia .-> REF[Honest refusal]
+
+    %% ---------- Oversight ----------
+    OUT --> SC{Dashboard system checks: IDs exist, metadata matches, unique, length, determinism}
+    SC --> HR[Human review: listener choice, Details panel, language overrides]
+    ANS --> HR
+    DET --> HR
+    ORCH --> LOG[Logging: each step, counts, timing; keys redacted]
+    OUT --> TEST[Automated tests and evaluation.py]
+    ANS --> TEST
